@@ -1,7 +1,38 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useContext } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { AuthContext } from "../context/AuthContext";
+
+const BASE_URL = process.env.REACT_APP_API_URL
 
 const Login = () => {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  const { login } = useContext(AuthContext);  // AuthContext 사용
+
+  const handleLogin = async () => {
+    setError(null);
+    try {
+      const response = await axios.post(`${BASE_URL}/account/login/`, {
+        username,
+        password,
+      }, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = response.data;
+
+      login(data.access);  // 로그인 함수 호출
+      navigate("/");       // 홈으로 이동
+    } catch (err) {
+      setError(err.response?.data?.detail || "로그인 실패. 아이디와 비밀번호를 확인하세요.");
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-white">
       {/* 로그인 컨테이너 */}
@@ -16,6 +47,8 @@ const Login = () => {
           type="text"
           placeholder="아이디"
           className="w-full p-3 mb-4 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
         />
 
         {/* 비밀번호 입력 */}
@@ -23,7 +56,12 @@ const Login = () => {
           type="password"
           placeholder="비밀번호"
           className="w-full p-3 mb-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
         />
+
+        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+
         {/* 회원가입 */}
         <p className="text-gray-300 text-right text-sm mb-4">
           <Link to="/signup" className="text-gray-300 hover:undefined">
@@ -32,13 +70,16 @@ const Login = () => {
         </p>
 
         {/* 로그인 버튼 */}
-        <button className="w-full p-3 text-black font-bold bg-yellow-400 rounded-md hover:bg-yellow-500">
+        <button
+          className="w-full p-3 text-black font-bold bg-yellow-400 rounded-md hover:bg-yellow-500"
+          onClick={handleLogin}
+        >
           로그인
         </button>
 
         {/* Steam 로그인 버튼 */}
         <button className="w-full p-3 mt-3 text-white font-bold bg-gray-700 rounded-md hover:bg-gray-800 flex items-center justify-center">
-          <img src="/steam-logo.png" alt="Steam Logo" className="w-6 h-6 mr-2" /> 
+          <img src="/steam-logo.png" alt="Steam Logo" className="w-6 h-6 mr-2" />
           Steam으로 시작하기
         </button>
       </div>
