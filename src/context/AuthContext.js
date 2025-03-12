@@ -7,7 +7,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    setIsLoggedIn(!!token);
+    setIsLoggedIn(!!token); // 토큰이 존재하면 로그인 상태 유지
   }, []);
 
   const login = (token) => {

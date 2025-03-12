@@ -23,12 +23,23 @@ const Login = () => {
           "Content-Type": "application/json",
         },
       });
-
+  
       const data = response.data;
-
-      login(data.access);  // 로그인 함수 호출
-      navigate("/");       // 홈으로 이동
+  
+      console.log("📌 로그인 응답 데이터:", data);  // ← 디버깅용 로그 추가
+  
+      if (data.access && data.refresh) {
+        localStorage.setItem("access_token", data.access);
+        localStorage.setItem("refresh_token", data.refresh);
+        console.log("✅ JWT 토큰 저장 완료!");
+  
+        login(data.access);  // 로그인 함수 호출
+        navigate("/");       // 홈으로 이동
+      } else {
+        throw new Error("JWT 토큰이 응답에 없습니다.");
+      }
     } catch (err) {
+      console.error("🚨 로그인 실패:", err.response?.data || err);
       setError(err.response?.data?.detail || "로그인 실패. 아이디와 비밀번호를 확인하세요.");
     }
   };
