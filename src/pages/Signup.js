@@ -9,7 +9,7 @@ const Signup = () => {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    password2: "",
+    confirm_password: "",
     nickname: "",
     email: "",
     customDomain: "naver.com",
@@ -53,11 +53,6 @@ const Signup = () => {
     e.preventDefault();
     setError("");
 
-    if (formData.password !== formData.password2) {
-      setError("비밀번호가 일치하지 않습니다.");
-      return;
-    }
-
     // 이메일 조합 (직접 입력 여부 확인)
     let finalEmail;
     if (customEmail) {
@@ -77,7 +72,7 @@ const Signup = () => {
       await axios.post(`${BASE_URL}/account/signup/`, {
         username: formData.username,
         password: formData.password,
-        password2: formData.password,
+        confirm_password: formData.confirm_password,
         nickname: formData.nickname,
         email: finalEmail,
         birth: birth,
@@ -126,9 +121,9 @@ const Signup = () => {
           <label className="block text-gray-700 font-medium mt-4">비밀번호 확인</label>
           <input
             type="password"
-            name="password2"
+            name="confirm_password"
             placeholder="비밀번호 재입력"
-            value={formData.password2}
+            value={formData.confirm_password}
             onChange={handleChange}
             className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
