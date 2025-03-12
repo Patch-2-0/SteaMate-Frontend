@@ -11,7 +11,8 @@ function App() {
   return (
     <Router>
       <Header />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+      {/* 헤더 높이(4rem = 64px)를 제외한 화면 영역 설정 */}
+      <div className="flex flex-col items-center justify-center bg-white" style={{ height: "calc(100vh - 4rem)", marginTop: "4rem" }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/chatmate" element={<ChatMate />} />
