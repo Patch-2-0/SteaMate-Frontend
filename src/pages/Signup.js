@@ -91,7 +91,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-white">
+    <div className="flex items-center justify-center bg-white">
       <div className="bg-white p-10 rounded-xl shadow-lg w-[550px]">
         <h2 className="text-3xl font-bold text-gray-900 mb-4 text-center">회원가입</h2>
 
