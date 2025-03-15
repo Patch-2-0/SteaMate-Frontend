@@ -143,15 +143,18 @@ export default function ChatbotUI() {
       return;
     }
 
-    const newMessage = { text: input, sender: "user" };
-    setMessages(prev => ({
-      ...prev,
-      [activeSessionId]: [...(prev[activeSessionId] || []), newMessage]
-    }));
     const currentInput = input;
     setInput("");
     setError(null);
     setIsSending(true);
+
+    // 사용자 메시지 즉시 UI에 추가
+    setMessages(prev => ({
+      ...prev,
+      [activeSessionId]: [...(prev[activeSessionId] || []), 
+        { text: currentInput, sender: "user" }
+      ]
+    }));
 
     try {
       const response = await fetch(`${BASE_URL}/chat/${activeSessionId}/message/`, {
@@ -166,13 +169,22 @@ export default function ChatbotUI() {
       if (!response.ok) throw new Error("메시지 전송 실패");
 
       const data = await response.json();
-      setMessages(prev => ({
-        ...prev,
-        [activeSessionId]: [...(prev[activeSessionId] || []), 
-          { text: currentInput, sender: "user", messageId: data.data.id },
-          { text: data.data.chatbot_message, sender: "bot" }
-        ]
-      }));
+      
+      // 마지막 사용자 메시지를 업데이트하고 봇 응답 추가
+      setMessages(prev => {
+        const messages = [...prev[activeSessionId]];
+        messages[messages.length - 1] = { 
+          text: currentInput, 
+          sender: "user", 
+          messageId: data.data.id 
+        };
+        return {
+          ...prev,
+          [activeSessionId]: [...messages, 
+            { text: data.data.chatbot_message, sender: "bot" }
+          ]
+        };
+      });
     } catch (error) {
       console.error("Error sending message:", error);
       setMessages(prev => ({
