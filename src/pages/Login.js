@@ -32,8 +32,32 @@ const Login = () => {
         localStorage.setItem("access_token", data.access);
         localStorage.setItem("refresh_token", data.refresh);
         console.log("✅ JWT 토큰 저장 완료!");
-  
-        login(data.access);  // 로그인 함수 호출
+
+        try {
+          // 토큰에서 user_id 추출
+          const tokenParts = data.access.split('.');
+          if (tokenParts.length === 3) {
+            const tokenPayload = JSON.parse(atob(tokenParts[1]));
+            console.log("토큰 페이로드:", tokenPayload);
+            const userId = tokenPayload.user_id;
+            console.log("추출된 userId:", userId);
+            
+            if (userId) {
+              login(data.access, userId.toString());  // userId를 문자열로 변환하여 저장
+              console.log("userId 저장 완료:", userId);
+            } else {
+              console.error("토큰에서 user_id를 찾을 수 없습니다.");
+              login(data.access);
+            }
+          } else {
+            console.error("토큰 형식이 올바르지 않습니다.");
+            login(data.access);
+          }
+        } catch (error) {
+          console.error("토큰 파싱 중 오류 발생:", error);
+          login(data.access);
+        }
+        
         navigate("/");       // 홈으로 이동
       } else {
         throw new Error("JWT 토큰이 응답에 없습니다.");

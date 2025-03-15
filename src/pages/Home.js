@@ -8,7 +8,7 @@ const Home = () => {
         {/* ChatMate Section */}
         <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center text-center">
           <img 
-            src="https://via.placeholder.com/300" 
+            src="/images/chatmate-placeholder.png" 
             alt="ChatMate Placeholder" 
             className="w-full h-48 object-cover rounded-lg mb-4"
           />
@@ -19,7 +19,7 @@ const Home = () => {
         {/* PickMate Section */}
         <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center text-center">
           <img 
-            src="https://via.placeholder.com/300" 
+            src="/images/pickmate-placeholder.png" 
             alt="PickMate Placeholder" 
             className="w-full h-48 object-cover rounded-lg mb-4"
           />

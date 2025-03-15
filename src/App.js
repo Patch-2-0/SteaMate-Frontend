@@ -6,6 +6,7 @@ import ChatMate from "./pages/ChatMate";
 import PickMate from "./pages/PickMate";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import MyPage from "./pages/MyPage";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/pickmate" element={<Layout><PickMate /></Layout>} />
         <Route path="/login" element={<Layout><Login /></Layout>} />
         <Route path="/signup" element={<Layout><Signup /></Layout>} />
+        <Route path="/mypage" element={<Layout><MyPage /></Layout>} />
       </Routes>
     </Router>
   );
