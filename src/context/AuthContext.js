@@ -5,35 +5,43 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem("access_token") || null);
   const [userId, setUserId] = useState(localStorage.getItem("user_id") || null);
-  const [isLoggedIn, setIsLoggedIn] = useState(!!token); // 토큰이 존재하면 로그인 상태 유지
+  const [isLoggedIn, setIsLoggedIn] = useState(!!token);
 
+  // ✅ localStorage 변경을 감지하여 상태 자동 업데이트
   useEffect(() => {
-    const storedToken = localStorage.getItem("access_token");
-    const storedUserId = localStorage.getItem("user_id");
-    console.log("✅ AuthContext에서 불러온 토큰:", storedToken);
-    console.log("✅ AuthContext에서 불러온 userId:", storedUserId);
-    setToken(storedToken);
-    setUserId(storedUserId);
-    setIsLoggedIn(!!storedToken);
+    const checkToken = () => {
+      const storedToken = localStorage.getItem("access_token");
+      const storedUserId = localStorage.getItem("user_id");
+  
+      setToken(storedToken);
+      setUserId(storedUserId);
+      setIsLoggedIn(!!storedToken);
+    };
+  
+    // 로컬스토리지 변경 즉시 반영 (현재 탭에서도 동작)
+    window.addEventListener("storage", checkToken);
+    window.addEventListener("focus", checkToken);  // ✅ 현재 탭 활성화 시에도 체크
+    checkToken(); // 최초 마운트 시 상태 체크
+  
+    return () => {
+      window.removeEventListener("storage", checkToken);
+    };  
   }, []);
 
   const login = (newToken, newUserId) => {
-    console.log("🚀 로그인: 토큰 저장 중...", newToken);
-    console.log("🚀 로그인: userId 저장 중...", newUserId);
     localStorage.setItem("access_token", newToken);
-    if (newUserId) {
-      localStorage.setItem("user_id", newUserId);
-      setUserId(newUserId);
-    }
+    localStorage.setItem("user_id", newUserId);
+    
     setToken(newToken);
+    setUserId(newUserId);
     setIsLoggedIn(true);
   };
 
   const logout = () => {
-    console.log("🚨 로그아웃: 토큰 삭제");
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user_id");
+
     setToken(null);
     setUserId(null);
     setIsLoggedIn(false);

@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
@@ -19,46 +19,17 @@ const Login = () => {
         username,
         password,
       }, {
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
-  
+
       const data = response.data;
-  
-      console.log("📌 로그인 응답 데이터:", data);  // ← 디버깅용 로그 추가
-  
+
       if (data.access && data.refresh) {
         localStorage.setItem("access_token", data.access);
         localStorage.setItem("refresh_token", data.refresh);
-        console.log("✅ JWT 토큰 저장 완료!");
 
-        try {
-          // 토큰에서 user_id 추출
-          const tokenParts = data.access.split('.');
-          if (tokenParts.length === 3) {
-            const tokenPayload = JSON.parse(atob(tokenParts[1]));
-            console.log("토큰 페이로드:", tokenPayload);
-            const userId = tokenPayload.user_id;
-            console.log("추출된 userId:", userId);
-            
-            if (userId) {
-              login(data.access, userId.toString());  // userId를 문자열로 변환하여 저장
-              console.log("userId 저장 완료:", userId);
-            } else {
-              console.error("토큰에서 user_id를 찾을 수 없습니다.");
-              login(data.access);
-            }
-          } else {
-            console.error("토큰 형식이 올바르지 않습니다.");
-            login(data.access);
-          }
-        } catch (error) {
-          console.error("토큰 파싱 중 오류 발생:", error);
-          login(data.access);
-        }
-        
-        navigate("/");       // 홈으로 이동
+        login(data.access, data.user_id);
+        navigate("/"); // 홈으로 이동
       } else {
         throw new Error("JWT 토큰이 응답에 없습니다.");
       }
@@ -68,16 +39,83 @@ const Login = () => {
     }
   };
 
+  const handleSteamLogin = async () => {
+    try {
+      const accessToken = localStorage.getItem("access_token"); // ✅ JWT 토큰 가져오기
+  
+      const headers = {
+        "Content-Type": "application/json",
+      };
+  
+      // ✅ 로그인된 사용자는 Authorization 헤더 포함
+      if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+      }
+  
+      const response = await axios.get(`${BASE_URL}/account/steamlogin/`, {
+        headers: headers, // ✅ JWT 포함된 헤더 추가
+      });
+  
+      const { steam_login_url } = response.data;
+  
+      if (steam_login_url) {
+        console.log("🚀 Steam 로그인 URL:", steam_login_url);
+        window.location.href = steam_login_url; // Steam 로그인 페이지로 이동
+      } else {
+        throw new Error("Steam 로그인 URL이 응답에 없습니다.");
+      }
+    } catch (err) {
+      console.error("🚨 Steam 로그인 실패:", err.response?.data || err);
+    }
+  };
+
+  // ✅ Steam Callback 처리 (로그인 상태 업데이트)
+  const handleSteamCallback = async () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const steamId = params.get("steamid"); // ✅ Steam 로그인 후 받은 steamid 가져오기
+
+      if (!steamId) {
+        throw new Error("Steam ID를 찾을 수 없습니다.");
+      }
+
+      // ✅ Steam ID를 사용하여 JWT 토큰 요청
+      const response = await axios.post(`${BASE_URL}/account/steamlogin/`, { steam_id: steamId });
+
+      const { access, refresh, user_id } = response.data;
+
+      if (access && refresh) {
+        localStorage.setItem("access_token", access);
+        localStorage.setItem("refresh_token", refresh);
+
+        // ✅ AuthContext의 로그인 함수 호출 (우측 상단 UI 변경)
+        login(access, user_id);
+
+        console.log("✅ Steam 로그인 완료, JWT 저장됨");
+        navigate("/"); // 홈으로 이동
+      } else {
+        throw new Error("JWT 토큰이 응답에 없습니다.");
+      }
+    } catch (err) {
+      console.error("🚨 Steam 로그인 처리 실패:", err.response?.data || err);
+      navigate("/login"); // 로그인 실패 시 로그인 페이지로 이동
+    }
+  };
+
+  // ✅ Steam Callback 페이지에서 자동 실행
+  useEffect(() => {
+    if (window.location.pathname === "/steam-callback") {
+      handleSteamCallback();
+    }
+  }, []);
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-white">
-      {/* 로그인 컨테이너 */}
       <div className="bg-black bg-opacity-50 p-8 rounded-lg shadow-lg w-96">
-        {/* 제목 */}
         <h2 className="text-white text-3xl font-bold text-center mb-6">
           Welcome !
         </h2>
 
-        {/* 아이디 입력 */}
         <input
           type="text"
           placeholder="아이디"
@@ -86,7 +124,6 @@ const Login = () => {
           onChange={(e) => setUsername(e.target.value)}
         />
 
-        {/* 비밀번호 입력 */}
         <input
           type="password"
           placeholder="비밀번호"
@@ -97,14 +134,12 @@ const Login = () => {
 
         {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
 
-        {/* 회원가입 */}
         <p className="text-gray-300 text-right text-sm mb-4">
           <Link to="/signup" className="text-gray-300 hover:undefined">
             회원가입하러 가기
           </Link>
         </p>
 
-        {/* 로그인 버튼 */}
         <button
           className="w-full p-3 text-black font-bold bg-yellow-400 rounded-md hover:bg-yellow-500"
           onClick={handleLogin}
@@ -113,7 +148,10 @@ const Login = () => {
         </button>
 
         {/* Steam 로그인 버튼 */}
-        <button className="w-full p-3 mt-3 text-white font-bold bg-gray-700 rounded-md hover:bg-gray-800 flex items-center justify-center">
+        <button
+          className="w-full p-3 mt-3 text-white font-bold bg-gray-700 rounded-md hover:bg-gray-800 flex items-center justify-center"
+          onClick={handleSteamLogin}
+        >
           <img src="/steam-logo.png" alt="Steam Logo" className="w-6 h-6 mr-2" />
           Steam으로 시작하기
         </button>
