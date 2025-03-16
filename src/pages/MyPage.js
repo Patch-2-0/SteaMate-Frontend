@@ -7,25 +7,12 @@ import { Input } from "../components/ui/input";
 // BASE_URL 수정
 const BASE_URL = "http://127.0.0.1:8000/api/v1";
 
-// 사용 가능한 장르와 게임 목록 추가
-const AVAILABLE_GENRES = [
-  "FPS", "RPG", "액션", "어드벤처", "시뮬레이션", "스포츠", 
-  "레이싱", "전략", "퍼즐", "배틀로얄", "MMORPG", "캐주얼"
-];
-
-const AVAILABLE_GAMES = [
-  "League of Legends", "Valorant", "PUBG", "Overwatch", 
-  "Lost Ark", "FIFA Online 4", "Maple Story", "Diablo IV",
-  "Counter-Strike", "Apex Legends", "Dota 2", "World of Warcraft"
-];
-
 export default function MyPage() {
   const { token, userId, logout, login } = useContext(AuthContext);
   const [userData, setUserData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     nickname: "",
-    email: "",
   });
   const [error, setError] = useState(null);
 
@@ -102,7 +89,6 @@ export default function MyPage() {
       setUserData(data);
       setEditForm({
         nickname: data.nickname || '',
-        email: data.email || '',
       });
     } catch (error) {
       console.error("사용자 데이터 로딩 실패:", error);
@@ -140,10 +126,9 @@ export default function MyPage() {
         throw new Error("사용자 ID를 찾을 수 없습니다.");
       }
 
-      // 수정된 부분: 닉네임과 이메일만 전송
+      // 수정된 부분: 닉네임만 전송
       const updateData = {
         nickname: editForm.nickname,
-        email: editForm.email
       };
 
       const response = await fetch(`${BASE_URL}/account/${currentUserId}/`, {
@@ -173,10 +158,11 @@ export default function MyPage() {
   };
 
   const handleDelete = async () => {
+    console.log("회원탈퇴 함수 실행됨");
+
     if (!window.confirm("정말 탈퇴하시겠습니까?")) return;
 
     try {
-      // userId가 없는 경우 토큰에서 추출 시도
       let currentUserId = userId;
       if (!currentUserId && token) {
         try {
@@ -195,22 +181,48 @@ export default function MyPage() {
         throw new Error("사용자 ID를 찾을 수 없습니다.");
       }
 
+      const refreshToken = localStorage.getItem("refresh_token");
+      console.log("[회원탈퇴] 리프레시 토큰:", refreshToken);
+
+      if (!refreshToken) {
+        throw new Error("로그인 정보가 만료되었습니다. 다시 로그인해주세요.");
+      }
+
+      const requestData = {
+        refresh: refreshToken  // refresh_token -> refresh로 다시 변경
+      };
+
+      console.log("[회원탈퇴] 요청 데이터:", requestData);
+
       const response = await fetch(`${BASE_URL}/account/${currentUserId}/`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
+        body: JSON.stringify(requestData)
       });
 
+      console.log("[회원탈퇴] 응답 상태:", response.status);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`회원 탈퇴 실패: ${response.status} ${response.statusText}`);
+        const responseText = await response.text();
+        console.log("[회원탈퇴] 에러 응답:", responseText);
+        
+        let errorMessage;
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorData.detail || errorData.message;
+        } catch (e) {
+          errorMessage = responseText;
+        }
+        throw new Error(errorMessage || "회원 탈퇴 처리 중 오류가 발생했습니다.");
       }
 
       logout();
+      window.location.href = '/';
     } catch (error) {
-      console.error("회원 탈퇴 실패:", error);
+      console.error("[회원탈퇴] 에러 발생:", error);
       setError(`❌ 회원 탈퇴에 실패했습니다: ${error.message}`);
     }
   };
@@ -268,16 +280,6 @@ export default function MyPage() {
                   }
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">이메일</label>
-                <Input
-                  value={editForm.email}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, email: e.target.value })
-                  }
-                  type="email"
-                />
-              </div>
 
               <div className="flex gap-2">
                 <Button type="submit">저장</Button>
@@ -298,9 +300,6 @@ export default function MyPage() {
                   <p>
                     <span className="font-medium">닉네임:</span>{" "}
                     {userData.nickname}
-                  </p>
-                  <p>
-                    <span className="font-medium">이메일:</span> {userData.email}
                   </p>
                 </div>
               </div>
