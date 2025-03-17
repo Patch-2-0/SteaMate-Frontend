@@ -6,7 +6,7 @@ import { Button } from "../components/ui/button";
 import { motion } from "framer-motion";
 import { Send, Plus } from "lucide-react";
 
-const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1";
+const BASE_URL = process.env.REACT_APP_API_URL;
 
 // ✅ 챗봇 응답 포맷팅 함수
 const formatChatbotResponse = (text) => {

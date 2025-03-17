@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 
 // BASE_URL 수정
-const BASE_URL = "http://127.0.0.1:8000/api/v1";
+const BASE_URL = process.env.REACT_APP_API_URL;
 
 export default function MyPage() {
   const { token, userId, logout, login } = useContext(AuthContext);
