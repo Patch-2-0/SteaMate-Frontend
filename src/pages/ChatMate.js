@@ -37,6 +37,7 @@ export default function ChatbotUI() {
   const [isSending, setIsSending] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(null);
+  const messagesEndRef = useRef(null);  // 새로운 ref 추가
 
   // 세션 목록 불러오기
   useEffect(() => {
@@ -336,10 +337,20 @@ export default function ChatbotUI() {
     }
   };
 
+  // 스크롤 함수 추가
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // 메시지가 변경될 때마다 스크롤
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, activeSessionId]);
+
   return (
     <div className="flex h-[calc(100vh-64px)] w-full max-w-6xl mx-auto bg-white shadow-lg rounded-2xl overflow-hidden">
       {/* 세션 목록 사이드바 */}
-      <div className="w-64 border-r bg-gray-50 p-4">
+      <div className="w-64 border-r bg-gray-50 p-4 overflow-y-auto">
         <Button onClick={createNewSession} className="w-full mb-4" size="icon">
           <Plus className="w-5 h-5" />
         </Button>
@@ -374,135 +385,136 @@ export default function ChatbotUI() {
       </div>
 
       {/* 채팅 영역 */}
-      <div className="flex flex-col flex-1">
-        <Card className="flex flex-col flex-1">
-          <CardContent className="flex flex-col flex-1 p-4">
+      <div className="flex-1 flex flex-col h-full">
+        {/* 메시지 영역 */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="h-full p-6">
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-2 bg-red-500 text-white rounded-lg text-center"
+                className="p-2 mb-6 bg-red-500 text-white rounded-lg text-center"
               >
                 {error}
               </motion.div>
             )}
 
-            <div className="flex-1 overflow-y-auto p-4" style={{ maxHeight: "calc(100vh - 120px)" }}>
-              <div className="flex flex-col gap-2">
-                {activeSessionId && messages[activeSessionId]?.map((msg, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className={`flex items-center gap-2 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    {msg.sender === "bot" && (
-                      <img src="/robot-avatar.png" alt="Bot" className="w-8 h-8 rounded-full" />
-                    )}
-                    <div className={`relative group ${msg.sender === "user" ? "self-end" : ""}`}>
-                      {editingMessageId === msg.messageId && msg.sender === "user" ? (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            value={editInput}
-                            onChange={(e) => setEditInput(e.target.value)}
-                            className="min-w-[200px]"
-                            autoFocus
-                            disabled={isEditing}
-                          />
-                          <Button 
-                            onClick={() => saveEditedMessage(msg.messageId)}
-                            size="sm"
-                            disabled={isEditing}
-                          >
-                            {isEditing ? (
-                              <div className="flex items-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                질문중...
-                              </div>
-                            ) : (
-                              "수정"
-                            )}
-                          </Button>
-                          <Button 
-                            onClick={() => {
-                              setEditingMessageId(null);
-                              setEditInput("");
-                            }}
-                            variant="outline"
-                            size="sm"
-                            disabled={isEditing}
-                          >
-                            취소
-                          </Button>
-                        </div>
-                      ) : (
-                        <div
-                          className={`p-3 rounded-lg max-w-[80%] ${
-                            msg.sender === "user" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900"
-                          }`}
+            <div className="space-y-6 pb-6">
+              {activeSessionId && messages[activeSessionId]?.map((msg, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={`flex items-start gap-3 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  {msg.sender === "bot" && (
+                    <img src="/robot-avatar.png" alt="Bot" className="w-8 h-8 rounded-full flex-shrink-0 mt-1" />
+                  )}
+                  <div className={`relative group max-w-[80%] ${msg.sender === "user" ? "self-end" : "self-start"}`}>
+                    {editingMessageId === msg.messageId && msg.sender === "user" ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={editInput}
+                          onChange={(e) => setEditInput(e.target.value)}
+                          className="min-w-[200px]"
+                          autoFocus
+                          disabled={isEditing}
+                        />
+                        <Button 
+                          onClick={() => saveEditedMessage(msg.messageId)}
+                          size="sm"
+                          disabled={isEditing}
                         >
-                          {msg.sender === "bot" ? formatChatbotResponse(msg.text) : msg.text}
-                          
-                          {msg.sender === "user" && msg.messageId && (
-                            <div className="absolute -left-16 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                              <button
-                                onClick={() => editMessage(msg.messageId, msg.text)}
-                                className="text-gray-500 hover:text-blue-500"
-                                disabled={isDeleting === msg.messageId}
-                              >
-                                ✎
-                              </button>
-                              <button
-                                onClick={() => deleteMessage(msg.messageId)}
-                                className="text-gray-500 hover:text-red-500"
-                                disabled={isDeleting === msg.messageId}
-                              >
-                                {isDeleting === msg.messageId ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-500 border-t-transparent" />
-                                ) : (
-                                  "🗑"
-                                )}
-                              </button>
+                          {isEditing ? (
+                            <div className="flex items-center gap-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                              질문중...
                             </div>
+                          ) : (
+                            "수정"
                           )}
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
-                <div ref={scrollRef}></div>
-              </div>
+                        </Button>
+                        <Button 
+                          onClick={() => {
+                            setEditingMessageId(null);
+                            setEditInput("");
+                          }}
+                          variant="outline"
+                          size="sm"
+                          disabled={isEditing}
+                        >
+                          취소
+                        </Button>
+                      </div>
+                    ) : (
+                      <div
+                        className={`p-4 rounded-lg break-words ${
+                          msg.sender === "user" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900"
+                        }`}
+                      >
+                        {msg.sender === "bot" ? formatChatbotResponse(msg.text) : msg.text}
+                        
+                        {msg.sender === "user" && msg.messageId && (
+                          <div className="absolute -left-16 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-3">
+                            <button
+                              onClick={() => editMessage(msg.messageId, msg.text)}
+                              className="text-gray-500 hover:text-blue-500"
+                              disabled={isDeleting === msg.messageId}
+                            >
+                              ✎
+                            </button>
+                            <button
+                              onClick={() => deleteMessage(msg.messageId)}
+                              className="text-gray-500 hover:text-red-500"
+                              disabled={isDeleting === msg.messageId}
+                            >
+                              {isDeleting === msg.messageId ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-500 border-t-transparent" />
+                              ) : (
+                                "🗑"
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+              <div ref={messagesEndRef} /> {/* 스크롤 위치 지정을 위한 요소 */}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* ✅ 입력창 하단 고정 */}
-        <div className="p-3 flex items-center border-t bg-white w-full relative">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="메시지를 입력하세요..."
-            className="flex-1"
-            disabled={isSending}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && !isSending) {
-                sendMessage();
-              }
-            }}
-          />
-          <Button 
-            onClick={sendMessage} 
-            className="ml-2" 
-            size="icon"
-            disabled={isSending}
-          >
-            {isSending ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </Button>
+        {/* 입력창 */}
+        <div className="flex-shrink-0 p-4 border-t bg-white">
+          <div className="flex items-center gap-3 max-w-[95%] mx-auto">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="메시지를 입력하세요..."
+              className="flex-1"
+              disabled={isSending}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !isSending) {
+                  sendMessage();
+                }
+              }}
+            />
+            <Button 
+              onClick={sendMessage} 
+              size="icon"
+              disabled={isSending}
+              className="ml-2"
+            >
+              {isSending ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
