@@ -74,12 +74,6 @@ const Header = () => {
         <Link to="/pickmate" className="button-pixel">PickMate</Link>
       </div>
 
-      {/* 오른쪽 버튼 */}
-      <div className="hidden md:flex space-x-4">
-        <Link to="/chatmate" className="button-style">ChatMate</Link>
-        <Link to="/pickmate" className="button-style" onClick={handlePickMateClick}>PickMate</Link>
-      </div>
-
       <div className="flex space-x-4">
         {isAuth ? (
           <>

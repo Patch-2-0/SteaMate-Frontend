@@ -92,7 +92,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="flex items-center justify-center bg-white">
+    <div className="flex items-center justify-center">
       <div className="bg-white p-10 rounded-xl shadow-lg w-[550px]">
         <h2 className="text-3xl font-bold text-gray-900 mb-4 text-center">회원가입</h2>
 
@@ -106,7 +106,7 @@ const Signup = () => {
             placeholder="아이디 입력(5~20자)"
             value={formData.username}
             onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
           />
 
           <label className="block text-gray-700 font-medium mt-4">비밀번호</label>
@@ -116,7 +116,7 @@ const Signup = () => {
             placeholder="비밀번호 입력"
             value={formData.password}
             onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
           />
 
           <label className="block text-gray-700 font-medium mt-4">비밀번호 확인</label>
@@ -126,7 +126,7 @@ const Signup = () => {
             placeholder="비밀번호 재입력"
             value={formData.confirm_password}
             onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
           />
 
           <label className="block text-gray-700 font-medium mt-4">닉네임</label>
@@ -136,7 +136,7 @@ const Signup = () => {
             placeholder="닉네임을 입력해주세요"
             value={formData.nickname}
             onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
           />
 
           <label className="block text-gray-700 font-medium mt-4">이메일</label>
@@ -147,7 +147,7 @@ const Signup = () => {
               placeholder="이메일"
               value={formData.email}
               onChange={handleChange}
-              className="w-1/2 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-1/2 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
             />
             <span className="flex items-center">@</span>
             <input
@@ -155,7 +155,7 @@ const Signup = () => {
               name="customDomain"
               value={formData.customDomain}
               onChange={handleChange}
-              className="w-1/4 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-1/4 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
             />
             <select
               onChange={(e) => {
@@ -172,7 +172,7 @@ const Signup = () => {
                   }));
                 }
               }}
-              className="w-1/4 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-1/4 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
             >
               <option value="naver.com">naver.com</option>
               <option value="gmail.com">gmail.com</option>
@@ -181,21 +181,21 @@ const Signup = () => {
             </select>
           </div>
 
-          <label className="block text-gray-700 font-medium mt-4">생년월일</label>
+          <label className="block text-gray-700  font-medium mt-4">생년월일</label>
           <div className="flex space-x-2">
-            <select name="birthYear" onChange={handleChange} className="w-1/3 p-3 border rounded-md">
+            <select name="birthYear" onChange={handleChange} className="w-1/3 p-3 border rounded-md focus:ring-blue-900">
               <option>년도</option>
               {Array.from({ length: 50 }, (_, i) => (
                 <option key={i} value={1975 + i}>{1975 + i}</option>
               ))}
             </select>
-            <select name="birthMonth" onChange={handleChange} className="w-1/3 p-3 border rounded-md">
+            <select name="birthMonth" onChange={handleChange} className="w-1/3 p-3 border rounded-md focus:ring-blue-900">
               <option>월</option>
               {Array.from({ length: 12 }, (_, i) => (
                 <option key={i} value={i + 1}>{i + 1}</option>
               ))}
             </select>
-            <select name="birthDay" onChange={handleChange} className="w-1/3 p-3 border rounded-md">
+            <select name="birthDay" onChange={handleChange} className="w-1/3 p-3 border rounded-md focus:ring-blue-900">
               <option>일</option>
               {Array.from({ length: 31 }, (_, i) => (
                 <option key={i} value={i + 1}>{i + 1}</option>
@@ -210,7 +210,7 @@ const Signup = () => {
             <option value="3">비공개</option>
           </select>
 
-          <button type="submit" className="w-full mt-6 py-3 bg-blue-500 text-white font-bold rounded-md hover:bg-blue-600">
+          <button type="submit" className="w-full mt-6 py-3 bg-blue-950 text-white font-bold rounded-md hover:bg-blue-900">
             가입하기
           </button>
         </form>

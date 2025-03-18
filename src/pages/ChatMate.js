@@ -418,7 +418,7 @@ export default function ChatbotUI() {
                   className={`flex items-start gap-3 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {msg.sender === "bot" && (
-                    <img src="/robot-avatar.png" alt="Bot" className="w-8 h-8 rounded-xl flex-shrink-0 mt-1" />
+                    <img src="/robot-avatar.gif" alt="Bot" className="w-12 h-12 rounded-xl flex-shrink-0 mt-1" />
                   )}
                   <div className={`relative group max-w-[80%] ${msg.sender === "user" ? "self-end" : "self-start"}`}>
                     {editingMessageId === msg.messageId && msg.sender === "user" ? (
@@ -506,14 +506,14 @@ export default function ChatbotUI() {
         </div>
 
         {/* 입력창 */}
-        <div className="flex-shrink-0 p-4 border-t bg-white">
+        <div className="flex-shrink-0 p-4 border-none bg-white">
           <div className="flex items-center gap-3 max-w-[95%] mx-auto">
             <form 
               onSubmit={(e) => { 
                 e.preventDefault(); 
                 sendMessage(); 
               }} 
-              className="flex items-center w-full max-w-3xl border border-gray-300 rounded-lg p-3 bg-white shadow-md">
+              className="flex items-center w-full max-w-4xl border border-gray-300 rounded-lg p-3 bg-white shadow-md">
               <Input 
                 type="text"
                 value={input}
