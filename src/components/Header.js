@@ -9,6 +9,7 @@ const Header = () => {
   const { isLoggedIn, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [isAuth, setIsAuth] = useState(isLoggedIn);
+  const [menuOpen, setMenuOpen] = useState(false); // ✅ 햄버거 메뉴 상태 추가
 
   // ✅ isLoggedIn이 변경될 때마다 UI 업데이트
   useEffect(() => {
@@ -18,12 +19,12 @@ const Header = () => {
   const handleLogout = async () => {
     const accessToken = localStorage.getItem("access_token");
     const refreshToken = localStorage.getItem("refresh_token");
-  
+
     if (!accessToken || !refreshToken) {
       console.error("🚨 로그아웃 실패: JWT 토큰이 없습니다.");
       return;
     }
-  
+
     try {
       await axios.post(
         `${BASE_URL}/account/logout/`,
@@ -35,7 +36,7 @@ const Header = () => {
           },
         }
       );
-  
+
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
       logout();
@@ -46,31 +47,61 @@ const Header = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 w-full h-16 bg-sky-300 p-4 flex justify-between items-center shadow-md z-50">
-      <Link to="/" className="text-2xl font-bold tracking-wide text-black">
+    <nav className="fixed top-0 left-0 w-full h-14 bg-transparent text-white px-6 flex justify-between items-center z-50">
+
+      {/* 로고 (왼쪽) */}
+      <Link to="/" className="text-3xl font-bold font-pixel tracking-tight">
         SteaMate
       </Link>
 
-      <div className="hidden md:flex space-x-4">
-        <Link to="/chatmate" className="button-style">ChatMate</Link>
-        <Link to="/pickmate" className="button-style">PickMate</Link>
+
+      {/* 햄버거 버튼 (모바일 전용) */}
+      <button 
+        className="md:hidden text-white text-3xl focus:outline-none" 
+        onClick={() => setMenuOpen(!menuOpen)}
+      >
+        ☰
+      </button>
+
+      {/* 중앙 메뉴 (화면이 클 때만 보이기) */}
+      <div className="hidden md:flex space-x-6 font-semibold">
+        <Link to="/chatmate" className="button-pixel">ChatMate</Link>
+        <Link to="/pickmate" className="button-pixel">PickMate</Link>
       </div>
 
-      <div className="flex space-x-4">
+      {/* 오른쪽 버튼 */}
+      <div className="hidden md:flex space-x-4">
         {isAuth ? (
           <>
-            <Link to="/mypage" className="button-style">마이페이지</Link>
-            <button onClick={handleLogout} className="button-highlight">
-              로그아웃
-            </button>
+            <Link to="/mypage" className="button-pixel">Mypage</Link>
+            <button onClick={handleLogout} className="button-pixel">Logout</button>
           </>
         ) : (
           <>
-            <Link to="/login" className="button-style">로그인</Link>
-            <Link to="/signup" className="button-highlight">회원가입</Link>
+            <Link to="/login" className="button-pixel">Login</Link>
+            <Link to="/signup" className="button-pixel">Signup</Link>
           </>
         )}
       </div>
+
+      {/* 모바일 메뉴 (햄버거 버튼을 눌렀을 때 나타남) */}
+      {menuOpen && (
+        <div className="absolute top-14 left-0 w-full bg-[#1b1b3a] text-white flex flex-col items-center py-4 space-y-4 md:hidden">
+          <Link to="/chatmate" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>ChatMate</Link>
+          <Link to="/pickmate" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>PickMate</Link>
+          {isAuth ? (
+            <>
+              <Link to="/mypage" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>마이페이지</Link>
+              <button onClick={handleLogout} className="button-pixel w-3/4">로그아웃</button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>로그인</Link>
+              <Link to="/signup" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>회원가입</Link>
+            </>
+          )}
+        </div>
+      )}
     </nav>
   );
 };
