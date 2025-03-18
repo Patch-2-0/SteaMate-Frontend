@@ -3,12 +3,14 @@ import Header from "./Header";
 
 const Layout = ({ children }) => {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen navy">
       <Header />
-      {/* flex-grow로 컨텐츠 영역 확장, height 제거 */}
-      <div className="flex flex-col flex-grow items-center bg-white w-full pt-16">
-        {children}
-      </div>
+        <div
+          className="flex flex-col w-full min-h-screen bg-gradient-to-b from-[#1b1b3a] to-[#0a0a23]"
+          style={{ paddingTop: "56px" }} // 헤더 높이만큼 여백 추가
+          >
+          {children}
+        </div>
     </div>
   );
 };

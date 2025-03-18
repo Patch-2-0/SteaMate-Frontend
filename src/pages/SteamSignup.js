@@ -116,7 +116,7 @@ const SteamSignup = () => {
   };
 
   return (
-    <div className="flex items-center justify-center bg-white min-h-screen">
+    <div className="flex items-center justify-center">
       <div className="bg-white p-10 rounded-xl shadow-lg w-[550px]">
         <h2 className="text-3xl font-bold text-gray-900 mb-4 text-center">Steam 회원가입</h2>
 
@@ -139,7 +139,7 @@ const SteamSignup = () => {
             placeholder="아이디 입력(5~20자)"
             value={formData.username}
             onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
           />
 
           <label className="block text-gray-700 font-medium mt-4">비밀번호</label>
@@ -149,7 +149,7 @@ const SteamSignup = () => {
             placeholder="비밀번호 입력"
             value={formData.password}
             onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
           />
 
           <label className="block text-gray-700 font-medium mt-4">비밀번호 확인</label>
@@ -159,7 +159,7 @@ const SteamSignup = () => {
             placeholder="비밀번호 재입력"
             value={formData.confirm_password}
             onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
           />
 
           <label className="block text-gray-700 font-medium mt-4">닉네임</label>
@@ -169,7 +169,7 @@ const SteamSignup = () => {
             placeholder="닉네임을 입력해주세요"
             value={formData.nickname}
             onChange={handleChange}
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
           />
 
           <label className="block text-gray-700 font-medium mt-4">이메일</label>
@@ -180,7 +180,7 @@ const SteamSignup = () => {
               placeholder="이메일"
               value={formData.email}
               onChange={handleChange}
-              className="w-1/2 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-1/2 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
             />
             <span className="flex items-center">@</span>
             <input
@@ -188,7 +188,7 @@ const SteamSignup = () => {
               name="customDomain"
               value={formData.customDomain}
               onChange={handleChange}
-              className="w-1/4 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-1/4 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
             />
             <select
               onChange={(e) => {
@@ -205,7 +205,7 @@ const SteamSignup = () => {
                   }));
                 }
               }}
-              className="w-1/4 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-1/4 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-900"
             >
               <option value="naver.com">naver.com</option>
               <option value="gmail.com">gmail.com</option>
@@ -246,7 +246,7 @@ const SteamSignup = () => {
           <button
             type="submit"
             className={`w-full mt-6 py-3 text-white font-bold rounded-md ${
-              loading || !steamId ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+              loading || !steamId ? "bg-gray-400 cursor-not-allowed" : "bg-blue-950 hover:bg-blue-900"
             }`}
             disabled={loading || !steamId}
           >

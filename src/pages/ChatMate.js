@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { motion } from "framer-motion";
@@ -31,7 +30,6 @@ export default function ChatbotUI() {
   const [messages, setMessages] = useState({});  // 세션별 메시지 저장
   const [input, setInput] = useState("");
   const [error, setError] = useState(null);
-  const scrollRef = useRef(null);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editInput, setEditInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -100,7 +98,6 @@ export default function ChatbotUI() {
         [sessionId]: formattedMessages
       }));
     } catch (error) {
-      console.error("Error fetching messages:", error);
       setError("❌ 대화 내역을 불러올 수 없습니다.");
     }
   };
@@ -346,6 +343,14 @@ export default function ChatbotUI() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); // 기본 동작 방지 (예: 폼 자동 제출)
+      sendMessage(); // ✅ 메시지 전송 함수 호출
+    }
+  };
+  
+
   // 메시지가 변경될 때마다 스크롤
   useEffect(() => {
     scrollToBottom();
@@ -355,7 +360,7 @@ export default function ChatbotUI() {
     <div className="flex h-[calc(100vh-64px)] w-full max-w-6xl mx-auto bg-white shadow-lg rounded-2xl overflow-hidden">
       {/* 세션 목록 사이드바 */}
       <div className="w-64 border-r bg-gray-50 p-4 overflow-y-auto">
-        <Button onClick={createNewSession} className="w-full mb-4" size="icon">
+        <Button onClick={createNewSession} className="w-full mb-4 bg-blue-950 hover:bg-blue-900 text-white rounded-lg" size="icon">
           <Plus className="w-5 h-5" />
         </Button>
         <div className="space-y-2">
@@ -363,7 +368,7 @@ export default function ChatbotUI() {
             <div
               key={session.id}
               className={`p-3 rounded-lg cursor-pointer relative group ${
-                activeSessionId === session.id ? "bg-blue-500 text-white" : "bg-gray-100 hover:bg-gray-200"
+                activeSessionId === session.id ? "bg-blue-950 hover:bg-blue-900 text-white" : "bg-gray-100 hover:bg-gray-200"
               }`}
             >
               <div
@@ -413,7 +418,7 @@ export default function ChatbotUI() {
                   className={`flex items-start gap-3 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {msg.sender === "bot" && (
-                    <img src="/robot-avatar.png" alt="Bot" className="w-8 h-8 rounded-full flex-shrink-0 mt-1" />
+                    <img src="/robot-avatar.gif" alt="Bot" className="w-12 h-12 rounded-xl flex-shrink-0 mt-1" />
                   )}
                   <div className={`relative group max-w-[80%] ${msg.sender === "user" ? "self-end" : "self-start"}`}>
                     {editingMessageId === msg.messageId && msg.sender === "user" ? (
@@ -454,7 +459,7 @@ export default function ChatbotUI() {
                     ) : (
                       <div
                         className={`p-4 rounded-lg break-words ${
-                          msg.sender === "user" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900"
+                          msg.sender === "user" ? "bg-blue-950 text-white" : "bg-gray-100 text-gray-900"
                         }`}
                       >
                         {msg.sender === "bot" ? (
@@ -472,7 +477,7 @@ export default function ChatbotUI() {
                           <div className="absolute -left-16 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-3">
                             <button
                               onClick={() => editMessage(msg.messageId, msg.text)}
-                              className="text-gray-500 hover:text-blue-500"
+                              className="text-gray-500 hover:text-blue-950"
                               disabled={isDeleting === msg.messageId}
                             >
                               ✎
@@ -501,28 +506,31 @@ export default function ChatbotUI() {
         </div>
 
         {/* 입력창 */}
-        <div className="flex-shrink-0 p-4 border-t bg-white">
+        <div className="flex-shrink-0 p-4 border-none bg-white">
           <div className="flex items-center gap-3 max-w-[95%] mx-auto">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="메시지를 입력하세요..."
-              className="flex-1"
-              disabled={isSending}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !isSending) {
-                  sendMessage();
-                }
-              }}
-            />
-            <Button 
-              onClick={sendMessage} 
-              size="icon"
-              disabled={isSending}
-              className="ml-2"
-            >
-              <Send className="w-5 h-5" />
-            </Button>
+            <form 
+              onSubmit={(e) => { 
+                e.preventDefault(); 
+                sendMessage(); 
+              }} 
+              className="flex items-center w-full max-w-4xl border border-gray-300 rounded-lg p-3 bg-white shadow-md">
+              <Input 
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown} 
+                placeholder="메시지를 입력하세요..."
+                disabled={isSending}
+                className="flex-1 border-none focus:ring-0 focus:outline-none px-3"
+              />
+              <Button 
+                type="submit" 
+                disabled={isSending} 
+                className="ml-2 bg-blue-950 hover:bg-blue-900 text-white p-2 rounded-lg"
+              >
+                <Send size={20} />
+              </Button>
+            </form>
           </div>
         </div>
       </div>
