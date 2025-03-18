@@ -18,7 +18,7 @@ const SteamSignup = () => {
     confirm_password: "",
     nickname: "",
     email: "",
-    customDomain: "naver.com",
+    customDomain: "",
     birthYear: "",
     birthMonth: "",
     birthDay: "",
@@ -72,10 +72,14 @@ const SteamSignup = () => {
       return;
     }
   
-    // 이메일 최종 조합 로직 (예시, 정확한 로직으로 변경 필요)
-    const finalEmail = customEmail 
-      ? `${formData.email}@${formData.customDomain}` 
-      : `${formData.email}@${formData.customDomain || 'naver.com'}`;
+    // 이메일 유효성 검사
+    if (!formData.email || !formData.customDomain) {
+      setError("이메일을 올바르게 입력해주세요.");
+      setLoading(false);
+      return;
+    }
+  
+    const finalEmail = `${formData.email}@${formData.customDomain}`;
   
     // 생년월일 체크 로직 추가
     const birth = `${formData.birthYear}-${formData.birthMonth.padStart(2, "0")}-${formData.birthDay.padStart(2, "0")}`;
@@ -168,46 +172,47 @@ const SteamSignup = () => {
             className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
-<label className="block text-gray-700 font-medium mt-4">이메일 주소</label>
+          <label className="block text-gray-700 font-medium mt-4">이메일</label>
           <div className="flex space-x-2">
             <input
               type="text"
               name="email"
-              placeholder="이메일 주소"
+              placeholder="이메일"
               value={formData.email}
               onChange={handleChange}
-              className="w-2/3 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-1/2 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <span className="px-2 flex items-center">@</span>
-            <select
+            <span className="flex items-center">@</span>
+            <input
+              type="text"
               name="customDomain"
-              value={customEmail ? "custom" : formData.customDomain}
-              className="w-1/3 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={formData.customDomain}
               onChange={handleChange}
+              className="w-1/4 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <select
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value !== "direct") {
+                  setFormData(prev => ({
+                    ...prev,
+                    customDomain: value
+                  }));
+                } else {
+                  setFormData(prev => ({
+                    ...prev,
+                    customDomain: ""
+                  }));
+                }
+              }}
+              className="w-1/4 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="naver.com">naver.com</option>
               <option value="gmail.com">gmail.com</option>
               <option value="daum.net">daum.net</option>
-              <option value="custom">직접 입력</option>
+              <option value="direct">직접입력</option>
             </select>
           </div>
-
-          {customEmail && (
-            <input
-              type="text"
-              name="customDomain"
-              placeholder="도메인 직접 입력"
-              value={formData.customDomain}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  customDomain: e.target.value, // ✅ 입력한 값이 정상적으로 적용되도록 설정
-                }))
-              }
-              className="mt-2 w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          )}
-
 
           <label className="block text-gray-700 font-medium mt-4">생년월일</label>
           <div className="flex space-x-2">
