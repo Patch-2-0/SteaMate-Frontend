@@ -11,6 +11,8 @@ export default function MyPage() {
   const { token, userId, logout, login } = useContext(AuthContext);
   const [userData, setUserData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState(null);
   const [editForm, setEditForm] = useState({
     nickname: "",
   });
@@ -247,6 +249,142 @@ export default function MyPage() {
     }));
   };
 
+  // 스팀 라이브러리 동기화 함수 수정
+  const syncSteamLibrary = useCallback(async () => {
+    setIsSyncing(true);
+    setSyncError(null);
+    
+    try {
+      // steamlibrary 엔드포인트 사용
+      const response = await fetch(`${BASE_URL}/account/steamlibrary/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      // 응답이 JSON이 아닌 경우 처리
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('서버 응답 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        // Steam 프로필 비공개 에러
+        if (errorData.message && errorData.message.includes('공개 설정')) {
+          throw new Error('Steam 프로필이 비공개 상태입니다. Steam 프로필 설정에서 "게임 세부 정보"를 공개로 설정해주세요.');
+        }
+        
+        // 기타 에러
+        throw new Error(errorData.message || '라이브러리 동기화에 실패했습니다.');
+      }
+
+      await fetchUserData(); // 사용자 데이터 새로고침
+      // 연동 과정 중 자동 동기화인 경우 alert를 표시하지 않도록 수정
+      // 개별적으로 동기화 버튼을 클릭한 경우에만 alert 표시
+      const isAutoSync = new URLSearchParams(window.location.search).get('steam_id');
+      if (!isAutoSync) {
+        alert('스팀 라이브러리가 성공적으로 동기화되었습니다!');
+      }
+    } catch (error) {
+      console.error('스팀 라이브러리 동기화 실패:', error);
+      setSyncError(error.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [token, fetchUserData]);
+
+  // 자동 동기화를 위한 useEffect 추가
+  useEffect(() => {
+    if (userData?.steam_profile) {
+      // 마지막 동기화 시간을 localStorage에서 가져옴
+      const lastSyncTime = localStorage.getItem('lastSteamLibrarySync');
+      const now = new Date().getTime();
+      
+      // 마지막 동기화로부터 24시간이 지났거나, 동기화 기록이 없는 경우
+      if (!lastSyncTime || (now - parseInt(lastSyncTime)) > 24 * 60 * 60 * 1000) {
+        syncSteamLibrary().then(() => {
+          // 동기화 성공 시 시간 저장
+          localStorage.setItem('lastSteamLibrarySync', now.toString());
+        });
+      }
+    }
+  }, [userData?.steam_profile]); // steam_profile이 변경될 때마다 실행
+
+  // Steam 계정 연동 함수 수정
+  const handleSteamLink = async () => {
+    try {
+      // 스팀 로그인 URL 요청
+      const response = await fetch(`${BASE_URL}/account/steamlogin/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('스팀 로그인 요청 실패');
+      }
+
+      const data = await response.json();
+      
+      // 현재 URL을 state로 저장
+      sessionStorage.setItem('returnToMyPage', 'true');
+      
+      // 스팀 로그인 페이지로 리다이렉트
+      window.location.href = data.steam_login_url;
+    } catch (error) {
+      console.error('스팀 계정 연동 실패:', error);
+      alert('스팀 계정 연동에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  // 콜백 처리 및 스팀 ID 연동
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const steamId = params.get('steam_id');
+
+    if (steamId && token) {  // token 체크 추가
+      const linkSteamAccount = async () => {
+        try {
+          // 바로 steamlink API 호출
+          const response = await fetch(`${BASE_URL}/account/steamlink/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ steam_id: steamId })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || '스팀 계정 연동 실패');
+          }
+
+          // URL 파라미터 제거
+          window.history.replaceState({}, document.title, window.location.pathname);
+          
+          // 사용자 데이터 새로고침
+          await fetchUserData();
+          
+          // 스팀 계정 연동 후 바로 라이브러리 동기화 실행
+          await syncSteamLibrary();
+          
+          alert('스팀 계정이 성공적으로 연동되고 라이브러리가 동기화되었습니다!');
+        } catch (error) {
+          console.error('스팀 계정 연동 실패:', error);
+          alert(error.message || '스팀 계정 연동에 실패했습니다. 다시 시도해주세요.');
+        }
+      };
+
+      linkSteamAccount();
+    }
+  }, [token, fetchUserData, syncSteamLibrary]);
+
   if (!token) {
     return (
       <div className="container mx-auto p-4 text-center">
@@ -304,7 +442,7 @@ export default function MyPage() {
                 </div>
               </div>
 
-              {userData.steam_profile && (
+              {userData.steam_profile ? (
                 <div>
                   <h2 className="text-lg font-semibold mb-4">Steam 정보</h2>
                   <div className="flex items-center space-x-4">
@@ -314,10 +452,10 @@ export default function MyPage() {
                       className="w-16 h-16 rounded-full"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = '/default-avatar.png'; // 기본 이미지로 대체
+                        e.target.src = '/default-avatar.png';
                       }}
                     />
-                    <div>
+                    <div className="space-y-2">
                       <p>
                         <span className="font-medium">Steam 닉네임:</span>{" "}
                         {userData.steam_profile.personaname}
@@ -330,7 +468,54 @@ export default function MyPage() {
                       >
                         Steam 프로필 방문
                       </a>
+                      {/* 라이브러리가 없는 경우에만 동기화 버튼 표시 */}
+                      {(!userData.preferred_game || userData.preferred_game.length === 0) && (
+                        <div className="mt-2">
+                          <Button 
+                            onClick={syncSteamLibrary}
+                            disabled={isSyncing}
+                            variant="secondary"
+                            className="w-full"
+                          >
+                            {isSyncing ? "동기화 중..." : "스팀 라이브러리 동기화"}
+                          </Button>
+                          {syncError && (
+                            <div className="mt-2">
+                              <p className="text-red-500 text-sm">
+                                {syncError}
+                              </p>
+                              {syncError.includes('Steam 프로필이 비공개') && (
+                                <div className="mt-2 text-sm text-gray-600">
+                                  <p>Steam 프로필을 공개로 설정하는 방법:</p>
+                                  <ol className="list-decimal list-inside mt-1">
+                                    <li>Steam 프로필 페이지로 이동</li>
+                                    <li>프로필 수정 버튼 클릭</li>
+                                    <li>프라이버시 설정에서 "게임 세부 정보"를 "공개"로 변경</li>
+                                    <li>변경사항 저장</li>
+                                  </ol>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <h2 className="text-lg font-semibold mb-4">Steam 계정 연동</h2>
+                  <div className="space-y-4">
+                    <p className="text-gray-600">
+                      Steam 계정을 연동하면 게임 라이브러리를 자동으로 가져올 수 있습니다.
+                    </p>
+                    <Button 
+                      onClick={handleSteamLink}
+                      variant="secondary"
+                      className="w-full"
+                    >
+                      Steam 계정 연동하기
+                    </Button>
                   </div>
                 </div>
               )}
