@@ -153,7 +153,8 @@ export default function ChatbotUI() {
     setMessages(prev => ({
       ...prev,
       [activeSessionId]: [...(prev[activeSessionId] || []), 
-        { text: currentInput, sender: "user" }
+        { text: currentInput, sender: "user" },
+        { text: "게임 추천을 위해 열심히 생각하고 있어요! \n🎮 10~20초 정도 걸릴 것 같아요~", sender: "bot", isLoading: true }
       ]
     }));
 
@@ -174,16 +175,19 @@ export default function ChatbotUI() {
       // 마지막 사용자 메시지를 업데이트하고 봇 응답 추가
       setMessages(prev => {
         const messages = [...prev[activeSessionId]];
-        messages[messages.length - 1] = { 
+        messages[messages.length - 2] = { 
           text: currentInput, 
           sender: "user", 
           messageId: data.data.id 
         };
+        messages[messages.length - 1] = { 
+          text: data.data.chatbot_message, 
+          sender: "bot",
+          isLoading: false
+        };
         return {
           ...prev,
-          [activeSessionId]: [...messages, 
-            { text: data.data.chatbot_message, sender: "bot" }
-          ]
+          [activeSessionId]: messages
         };
       });
     } catch (error) {
@@ -453,7 +457,16 @@ export default function ChatbotUI() {
                           msg.sender === "user" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900"
                         }`}
                       >
-                        {msg.sender === "bot" ? formatChatbotResponse(msg.text) : msg.text}
+                        {msg.sender === "bot" ? (
+                          <div className="flex items-start gap-2">
+                            <div>{formatChatbotResponse(msg.text)}</div>
+                            {msg.isLoading && (
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-transparent mt-1" />
+                            )}
+                          </div>
+                        ) : (
+                          msg.text
+                        )}
                         
                         {msg.sender === "user" && msg.messageId && (
                           <div className="absolute -left-16 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-3">
@@ -508,11 +521,7 @@ export default function ChatbotUI() {
               disabled={isSending}
               className="ml-2"
             >
-              {isSending ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
+              <Send className="w-5 h-5" />
             </Button>
           </div>
         </div>
