@@ -258,8 +258,7 @@ export default function MyPage() {
   if (!userData) return <div>로딩중...</div>;
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl">
-      <Card>
+    <div className="container mx-auto p-4 max-w-2xl bg-gray-200 rounded-lg shadow-lg">
         <CardContent className="p-6">
           <h1 className="text-2xl font-bold mb-6">마이페이지</h1>
           
@@ -368,15 +367,14 @@ export default function MyPage() {
               )}
 
               <div className="flex gap-2 pt-4">
-                <Button onClick={() => setIsEditing(true)}>정보 수정</Button>
-                <Button variant="destructive" onClick={handleDelete}>
+                <Button className=' bg-blue-950 hover:bg-blue-900' onClick={() => setIsEditing(true)}>정보 수정</Button>
+                <Button className=' bg-blue-950 hover:bg-blue-900' variant="destructive" onClick={handleDelete}>
                   회원 탈퇴
                 </Button>
               </div>
             </div>
           )}
         </CardContent>
-      </Card>
     </div>
   );
 }

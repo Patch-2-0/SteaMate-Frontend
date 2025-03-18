@@ -29,12 +29,11 @@ const Login = () => {
         localStorage.setItem("refresh_token", data.refresh);
 
         login(data.access, data.user_id);
-        navigate("/"); // 홈으로 이동
+        navigate("/mypage"); // 마이페이지로 이동
       } else {
         throw new Error("JWT 토큰이 응답에 없습니다.");
       }
     } catch (err) {
-      console.error("🚨 로그인 실패:", err.response?.data || err);
       setError(err.response?.data?.detail || "로그인 실패. 아이디와 비밀번호를 확인하세요.");
     }
   };
@@ -59,13 +58,11 @@ const Login = () => {
       const { steam_login_url } = response.data;
   
       if (steam_login_url) {
-        console.log("🚀 Steam 로그인 URL:", steam_login_url);
         window.location.href = steam_login_url; // Steam 로그인 페이지로 이동
       } else {
         throw new Error("Steam 로그인 URL이 응답에 없습니다.");
       }
     } catch (err) {
-      console.error("🚨 Steam 로그인 실패:", err.response?.data || err);
     }
   };
 
@@ -91,8 +88,7 @@ const Login = () => {
         // ✅ AuthContext의 로그인 함수 호출 (우측 상단 UI 변경)
         login(access, user_id);
 
-        console.log("✅ Steam 로그인 완료, JWT 저장됨");
-        navigate("/"); // 홈으로 이동
+        navigate("/mypage"); // 마이페이지로 이동
       } else {
         throw new Error("JWT 토큰이 응답에 없습니다.");
       }
@@ -110,8 +106,8 @@ const Login = () => {
   }, []);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-white">
-      <div className="bg-black bg-opacity-50 p-8 rounded-lg shadow-lg w-96">
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="bg-opacity-50 bg-gray-100 p-8 rounded-lg shadow-lg w-96">
         <h2 className="text-white text-3xl font-bold text-center mb-6">
           Welcome !
         </h2>
