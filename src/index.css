@@ -19,3 +19,41 @@
 .button-highlight:hover {
   @apply bg-yellow-500;
 }
+
+.button-pixel {
+  font-family: "Press Start 2P", sans-serif;
+  font-size: 12px; /* ✅ 글씨 크기 조정 */
+  line-height: 1.2; /* ✅ 글씨 수직 정렬 */
+  border: 2px solid #e0e0e0;
+  background: rgba(220, 220, 220, 0.8);
+  color: black;
+  padding: 10px 16px; /* ✅ 버튼 크기 줄이기 */
+  text-transform: uppercase;
+  border-radius: 10px; /* ✅ 둥글기 조금 줄이기 */
+  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.6); /* ✅ 그림자 크기 조정 */
+  transition: all 0.2s ease-in-out;
+  display: flex; /* ✅ 글씨 수직 정렬 */
+  align-items: center; /* ✅ 중앙 정렬 */
+  justify-content: center; /* ✅ 가로 정렬 */
+}
+
+.button-pixel:hover {
+  background: rgba(245, 245, 245, 0.9);
+  box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.6); /* ✅ 더 눌린 느낌 */
+}
+
+
+.card-pixel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: black;
+  border: 3px solid #6f7be0;
+  box-shadow: 0px 0px 12px #6f7be0; /* Glow 효과 줄이기 */
+  padding: 24px;
+  border-radius: 10px;
+  width: 320px; /* 크기 통일 */
+  height: 380px; /* 카드 높이 통일 */
+  text-align: center;
+}
