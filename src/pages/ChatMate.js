@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { motion } from "framer-motion";
 import { Send, Plus } from "lucide-react";
 
-const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000/api/v1";
+const BASE_URL = process.env.REACT_APP_API_URL;
 
 // ✅ 챗봇 응답 포맷팅 함수
 const formatChatbotResponse = (text) => {
@@ -150,7 +150,8 @@ export default function ChatbotUI() {
     setMessages(prev => ({
       ...prev,
       [activeSessionId]: [...(prev[activeSessionId] || []), 
-        { text: currentInput, sender: "user" }
+        { text: currentInput, sender: "user" },
+        { text: "게임 추천을 위해 열심히 생각하고 있어요! \n🎮 10~20초 정도 걸릴 것 같아요~", sender: "bot", isLoading: true }
       ]
     }));
 
@@ -171,16 +172,19 @@ export default function ChatbotUI() {
       // 마지막 사용자 메시지를 업데이트하고 봇 응답 추가
       setMessages(prev => {
         const messages = [...prev[activeSessionId]];
-        messages[messages.length - 1] = { 
+        messages[messages.length - 2] = { 
           text: currentInput, 
           sender: "user", 
           messageId: data.data.id 
         };
+        messages[messages.length - 1] = { 
+          text: data.data.chatbot_message, 
+          sender: "bot",
+          isLoading: false
+        };
         return {
           ...prev,
-          [activeSessionId]: [...messages, 
-            { text: data.data.chatbot_message, sender: "bot" }
-          ]
+          [activeSessionId]: messages
         };
       });
     } catch (error) {
@@ -458,7 +462,16 @@ export default function ChatbotUI() {
                           msg.sender === "user" ? "bg-blue-950 text-white" : "bg-gray-100 text-gray-900"
                         }`}
                       >
-                        {msg.sender === "bot" ? formatChatbotResponse(msg.text) : msg.text}
+                        {msg.sender === "bot" ? (
+                          <div className="flex items-start gap-2">
+                            <div>{formatChatbotResponse(msg.text)}</div>
+                            {msg.isLoading && (
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-transparent mt-1" />
+                            )}
+                          </div>
+                        ) : (
+                          msg.text
+                        )}
                         
                         {msg.sender === "user" && msg.messageId && (
                           <div className="absolute -left-16 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-3">

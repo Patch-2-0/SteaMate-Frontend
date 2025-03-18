@@ -46,6 +46,11 @@ const Header = () => {
     }
   };
 
+  const handlePickMateClick = (e) => {
+    e.preventDefault();
+    alert("PickMate 서비스는 현재 준비중입니다.");
+  };
+
   return (
     <nav className="fixed top-0 left-0 w-full h-14 bg-transparent text-white px-6 flex justify-between items-center z-50">
 
@@ -71,6 +76,11 @@ const Header = () => {
 
       {/* 오른쪽 버튼 */}
       <div className="hidden md:flex space-x-4">
+        <Link to="/chatmate" className="button-style">ChatMate</Link>
+        <Link to="/pickmate" className="button-style" onClick={handlePickMateClick}>PickMate</Link>
+      </div>
+
+      <div className="flex space-x-4">
         {isAuth ? (
           <>
             <Link to="/mypage" className="button-pixel">Mypage</Link>

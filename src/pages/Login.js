@@ -9,8 +9,44 @@ const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const [verificationMessage, setVerificationMessage] = useState(null);
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);  // AuthContext 사용
+
+  // URL 파라미터 확인을 위한 useEffect 추가
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    const verified = params.get('verified');
+    
+    if (verified === 'true') {
+      setVerificationMessage({ 
+        type: 'success', 
+        text: '이메일 인증이 완료되었습니다. 로그인해주세요.' 
+      });
+    } else if (error) {
+      switch (error) {
+        case 'already-verified':
+          setVerificationMessage({ type: 'info', text: '이미 인증된 계정입니다. 로그인해주세요.' });
+          break;
+        case 'time-over':
+          setVerificationMessage({ type: 'error', text: '인증 시간이 만료되었습니다. 다시 회원가입해주세요.' });
+          break;
+        case 'invalid-token':
+          setVerificationMessage({ type: 'error', text: '유효하지 않은 인증입니다. 다시 시도해주세요.' });
+          break;
+        case 'bad-request':
+          setVerificationMessage({ type: 'error', text: '잘못된 요청입니다. 다시 시도해주세요.' });
+          break;
+        default:
+          break;
+      }
+    }
+    // URL 파라미터 제거
+    if (error || verified) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   const handleLogin = async () => {
     setError(null);
@@ -29,12 +65,28 @@ const Login = () => {
         localStorage.setItem("refresh_token", data.refresh);
 
         login(data.access, data.user_id);
-        navigate("/mypage"); // 마이페이지로 이동
+        navigate("/");
       } else {
         throw new Error("JWT 토큰이 응답에 없습니다.");
       }
     } catch (err) {
-      setError(err.response?.data?.detail || "로그인 실패. 아이디와 비밀번호를 확인하세요.");
+      console.error("🚨 로그인 실패:", err.response?.data || err);
+      
+      // 이메일 인증 관련 에러 처리
+      if (err.response?.data?.detail?.includes('이메일 인증') || 
+          err.response?.data?.detail?.includes('verified') ||
+          err.response?.data?.detail?.includes('active')) {
+        setError(
+          <div>
+            <p className="text-red-500 mb-1">이메일 인증이 필요합니다.</p>
+            <p className="text-sm text-gray-300">
+              가입 시 입력한 이메일을 확인하여 인증을 완료해주세요.
+            </p>
+          </div>
+        );
+      } else {
+        setError(err.response?.data?.detail || "로그인 실패. 아이디와 비밀번호를 확인하세요.");
+      }
     }
   };
 
@@ -112,6 +164,17 @@ const Login = () => {
           Welcome !
         </h2>
 
+        {/* 인증 메시지 표시 */}
+        {verificationMessage && (
+          <div className={`mb-4 p-3 rounded ${
+            verificationMessage.type === 'error' ? 'bg-red-100 text-red-700' : 
+            verificationMessage.type === 'success' ? 'bg-green-100 text-green-700' :
+            'bg-blue-100 text-blue-700'
+          }`}>
+            {verificationMessage.text}
+          </div>
+        )}
+
         <input
           type="text"
           placeholder="아이디"
@@ -128,7 +191,16 @@ const Login = () => {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+        {/* 기존 에러 메시지 */}
+        {error && (
+          <div className="mb-4">
+            {typeof error === 'string' ? (
+              <p className="text-red-500 text-sm">{error}</p>
+            ) : (
+              error
+            )}
+          </div>
+        )}
 
         <p className="text-gray-300 text-right text-sm mb-4">
           <Link to="/signup" className="text-gray-300 hover:undefined">
