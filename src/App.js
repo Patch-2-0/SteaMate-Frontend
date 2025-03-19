@@ -9,6 +9,7 @@ import SteamCallback from "./pages/SteamCallback";
 import Signup from "./pages/Signup";
 import SteamSignup from "./pages/SteamSignup";
 import MyPage from "./pages/MyPage";
+import NotFound from "./pages/404";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/steamsignup" element={<Layout><SteamSignup /></Layout>} />
         <Route path="/mypage" element={<Layout><MyPage /></Layout>} />
         <Route path="/steam-callback" element={<SteamCallback />} /> {/* Steam Callback 처리 */}
+        <Route path="*" element={<Layout><NotFound /></Layout>} /> {/* 404 처리 */}
       </Routes>
     </Router>
   );
