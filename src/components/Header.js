@@ -71,7 +71,7 @@ const Header = () => {
       {/* 중앙 메뉴 (화면이 클 때만 보이기) */}
       <div className="hidden md:flex space-x-6 font-semibold">
         <Link to="/chatmate" className="button-pixel">ChatMate</Link>
-        <Link to="/pickmate" className="button-pixel">PickMate</Link>
+        <Link to="#" onClick={handlePickMateClick} className="button-pixel">PickMate</Link>
       </div>
 
       <div className="flex space-x-4">
@@ -92,7 +92,10 @@ const Header = () => {
       {menuOpen && (
         <div className="absolute top-14 left-0 w-full bg-[#1b1b3a] text-white flex flex-col items-center py-4 space-y-4 md:hidden">
           <Link to="/chatmate" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>ChatMate</Link>
-          <Link to="/pickmate" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>PickMate</Link>
+          <Link to="#" className="button-pixel w-3/4 text-center" onClick={(e) => {
+            setMenuOpen(false);
+            handlePickMateClick(e);
+          }}>PickMate</Link>
           {isAuth ? (
             <>
               <Link to="/mypage" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>마이페이지</Link>

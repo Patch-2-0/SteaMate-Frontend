@@ -55,11 +55,15 @@ export default function ChatbotUI() {
         if (!response.ok) throw new Error("세션 목록 조회 실패");
 
         const data = await response.json();
-        setSessions(data.data);
+        // 세션 목록을 created_at 기준으로 내림차순(최신순) 정렬
+        const sortedSessions = data.data.sort((a, b) => 
+          new Date(b.created_at) - new Date(a.created_at)
+        );
+        setSessions(sortedSessions);
         
         // 첫 번째 세션이 있다면 활성화하고 대화 내역 불러오기
-        if (data.data.length > 0) {
-          const firstSessionId = data.data[0].id;
+        if (sortedSessions.length > 0) {
+          const firstSessionId = sortedSessions[0].id;
           setActiveSessionId(firstSessionId);
           fetchSessionMessages(firstSessionId);
         }
@@ -123,7 +127,8 @@ export default function ChatbotUI() {
       const data = await response.json();
       const newSessionId = data.data.id;
       
-      setSessions(prev => [...prev, data.data]);
+      // 새로운 세션을 목록 맨 앞에 추가 (내림차순 유지)
+      setSessions(prev => [data.data, ...prev]);
       setActiveSessionId(newSessionId);
       setMessages(prev => ({
         ...prev,
