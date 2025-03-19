@@ -57,3 +57,19 @@
   height: 380px; /* 카드 높이 통일 */
   text-align: center;
 }
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px; /* 스크롤바 너비 조절 */
+  border-radius: 10px; /* 둥근 모서리 */
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent; /* 트랙 배경 */
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2); /* 스크롤바 색상 */
+  border-radius: 10px; /* 둥근 모서리 */
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3); /* 호버 시 색상 변경 */
+}
