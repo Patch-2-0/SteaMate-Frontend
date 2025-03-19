@@ -1,13 +1,17 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 const PickMate = () => {
   const navigate = useNavigate();
+  const hasAlerted = useRef(false);
 
   useEffect(() => {
-    // 페이지 로드 시 알림 표시 후 홈으로 리다이렉트
-    alert("PickMate 서비스는 현재 준비중입니다!");
-    navigate("/");
+    if (!hasAlerted.current) { // ✅ 첫 번째 실행만 실행됨
+      // 페이지 로드 시 알림 표시 후 홈으로 리다이렉트
+      alert("PickMate 서비스는 현재 준비중입니다!");
+      hasAlerted.current = true; // ✅ 실행 여부 저장
+      navigate("/");
+    }
   }, [navigate]);
 
   return (
