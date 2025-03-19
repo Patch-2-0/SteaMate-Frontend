@@ -73,19 +73,38 @@ const Login = () => {
       console.error("🚨 로그인 실패:", err.response?.data || err);
       
       // 이메일 인증 관련 에러 처리
-      if (err.response?.data?.detail?.includes('이메일 인증') || 
-          err.response?.data?.detail?.includes('verified') ||
-          err.response?.data?.detail?.includes('active')) {
-        setError(
-          <div>
-            <p className="text-red-500 mb-1">이메일 인증이 필요합니다.</p>
-            <p className="text-sm text-gray-300">
-              가입 시 입력한 이메일을 확인하여 인증을 완료해주세요.
-            </p>
-          </div>
-        );
+      if (err.response?.data?.detail) {
+        const errorDetail = err.response.data.detail;
+        
+        if (errorDetail.includes('이메일 인증') || 
+            errorDetail.includes('verified') ||
+            errorDetail.includes('active')) {
+          setError(
+            <div>
+              <p className="text-red-500 mb-1">이메일 인증이 필요합니다.</p>
+              <p className="text-sm text-gray-300">
+                가입 시 입력한 이메일을 확인하여 인증을 완료해주세요.
+              </p>
+            </div>
+          );
+        } else if (errorDetail.includes('No active account found') || 
+                  errorDetail.includes('Unable to log in with provided credentials')) {
+          setError("아이디 또는 비밀번호가 일치하지 않습니다.");
+        } else if (errorDetail.includes('already-verified')) {
+          setError("이미 인증된 계정입니다. 로그인해주세요.");
+        } else if (errorDetail.includes('time-over')) {
+          setError("인증 시간이 만료되었습니다. 다시 회원가입해주세요.");
+        } else if (errorDetail.includes('invalid-token')) {
+          setError("유효하지 않은 인증입니다. 다시 시도해주세요.");
+        } else if (errorDetail.includes('bad-request')) {
+          setError("잘못된 요청입니다. 다시 시도해주세요.");
+        } else {
+          setError(errorDetail);
+        }
+      } else if (err.response?.data?.error) {
+        setError(err.response.data.error);
       } else {
-        setError(err.response?.data?.detail || "로그인 실패. 아이디와 비밀번호를 확인하세요.");
+        setError("로그인 실패. 아이디와 비밀번호를 확인하세요.");
       }
     }
   };
@@ -115,6 +134,11 @@ const Login = () => {
         throw new Error("Steam 로그인 URL이 응답에 없습니다.");
       }
     } catch (err) {
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError("Steam 로그인 처리 중 오류가 발생했습니다.");
+      }
     }
   };
 
@@ -146,6 +170,13 @@ const Login = () => {
       }
     } catch (err) {
       console.error("🚨 Steam 로그인 처리 실패:", err.response?.data || err);
+      
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError("Steam 로그인 처리 중 오류가 발생했습니다.");
+      }
+      
       navigate("/login"); // 로그인 실패 시 로그인 페이지로 이동
     }
   };
