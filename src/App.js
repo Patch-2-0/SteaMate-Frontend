@@ -10,6 +10,8 @@ import Signup from "./pages/Signup";
 import SteamSignup from "./pages/SteamSignup";
 import MyPage from "./pages/MyPage";
 import NotFound from "./pages/404";
+import ErrorPage from "./pages/ErrorPage";
+import VerifyEmail from "./pages/VerifyEmail";
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
         <Route path="/mypage" element={<Layout><MyPage /></Layout>} />
         <Route path="/steam-callback" element={<SteamCallback />} /> {/* Steam Callback 처리 */}
         <Route path="*" element={<Layout><NotFound /></Layout>} /> {/* 404 처리 */}
+        <Route path="/error" element={<ErrorPage />} />
+        <Route path="/verify-email/:uidb64/:token" element={<VerifyEmail />} />
       </Routes>
     </Router>
   );
