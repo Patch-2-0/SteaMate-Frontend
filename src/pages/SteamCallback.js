@@ -19,7 +19,9 @@ const SteamCallback = () => {
       try {
         const response = await axios.get(
           `${BASE_URL}/account/steam-callback${location.search}`,
-          { withCredentials: true }
+          { 
+            withCredentials: false  // true에서 false로 변경
+          }
         );
 
         const { steam_id, new_user } = response.data;
