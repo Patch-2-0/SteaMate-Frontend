@@ -36,6 +36,7 @@ export default function ChatbotUI() {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(null);
   const messagesEndRef = useRef(null);  // 새로운 ref 추가
+  const sessionCreated = useRef(false); // ✅ 세션 생성 여부 추적
 
   // 세션 목록 불러오기
   useEffect(() => {
@@ -44,35 +45,39 @@ export default function ChatbotUI() {
         setError("❌ 로그인 후 이용해주세요.");
         return;
       }
-
+  
       try {
         const response = await fetch(`${BASE_URL}/chat/`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-
+  
         if (!response.ok) throw new Error("세션 목록 조회 실패");
-
+  
         const data = await response.json();
-        // 세션 목록을 created_at 기준으로 내림차순(최신순) 정렬
         const sortedSessions = data.data.sort((a, b) => 
           new Date(b.created_at) - new Date(a.created_at)
         );
+  
         setSessions(sortedSessions);
-        
-        // 첫 번째 세션이 있다면 활성화하고 대화 내역 불러오기
+  
         if (sortedSessions.length > 0) {
+          // ✅ 기존 세션이 있다면 첫 번째 세션을 활성화
           const firstSessionId = sortedSessions[0].id;
           setActiveSessionId(firstSessionId);
           fetchSessionMessages(firstSessionId);
+        } else if (!sessionCreated.current) {
+          // ✅ 세션이 없고, 한 번도 생성되지 않았다면 새 세션 생성
+          sessionCreated.current = true; // ✅ 중복 실행 방지
+          createNewSession();
         }
       } catch (error) {
         console.error("Error fetching sessions:", error);
         setError("❌ 세션 목록을 불러올 수 없습니다.");
       }
     };
-
+  
     fetchSessions();
   }, [token]);
 
@@ -90,7 +95,7 @@ export default function ChatbotUI() {
       const data = await response.json();
       // 서버에서 받은 메시지를 현재 형식에 맞게 변환하고 메시지 ID 포함
       const formattedMessages = [
-        { text: "안녕하세요! Steam 게임 추천 챗봇입니다.", sender: "bot" },
+        { text: "안녕하세요! Steam 게임 추천 챗봇입니다. \n MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! ", sender: "bot" },
         ...data.data.map(msg => ([
           { text: msg.user_message, sender: "user", messageId: msg.id },
           { text: msg.chatbot_message, sender: "bot" }
@@ -112,7 +117,7 @@ export default function ChatbotUI() {
       setError("❌ 로그인 후 이용해주세요.");
       return;
     }
-
+  
     try {
       const response = await fetch(`${BASE_URL}/chat/`, {
         method: "POST",
@@ -121,25 +126,24 @@ export default function ChatbotUI() {
           "Content-Type": "application/json",
         },
       });
-
+  
       if (!response.ok) throw new Error("세션 생성 실패");
-
+  
       const data = await response.json();
       const newSessionId = data.data.id;
-      
-      // 새로운 세션을 목록 맨 앞에 추가 (내림차순 유지)
-      setSessions(prev => [data.data, ...prev]);
-      setActiveSessionId(newSessionId);
+  
+      setSessions(prev => [data.data, ...prev]); // 세션 리스트 업데이트
+      setActiveSessionId(newSessionId); // ✅ 생성된 세션을 활성화
       setMessages(prev => ({
         ...prev,
-        [newSessionId]: [{ text: "안녕하세요! Steam 게임 추천 챗봇입니다.", sender: "bot" }]
+        [newSessionId]: [{ text: "안녕하세요! Steam 게임 추천 챗봇입니다. \n MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! ", sender: "bot" }]
       }));
     } catch (error) {
       console.error("Error creating session:", error);
       setError("❌ 세션을 생성할 수 없습니다.");
     }
   };
-
+  
   const sendMessage = async () => {
     if (input.trim() === "" || !activeSessionId) {
       setError("❌ 세션이 없습니다. 새로고침 해주세요.");
