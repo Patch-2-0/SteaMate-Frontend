@@ -64,7 +64,9 @@ const Login = () => {
         localStorage.setItem("access_token", data.access);
         localStorage.setItem("refresh_token", data.refresh);
 
-        login(data.access, data.user_id);
+        // JWT 토큰에서 user_id 가져오기
+        const user_id = parseJwt(data.access).user_id;
+        login(data.access, user_id);
         navigate("/");
       } else {
         throw new Error("JWT 토큰이 응답에 없습니다.");
@@ -142,29 +144,46 @@ const Login = () => {
     }
   };
 
-  // ✅ Steam Callback 처리 (로그인 상태 업데이트)
+  // JWT 토큰 파싱 함수 추가
+  const parseJwt = (token) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64).split('').map((c) => {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      console.error("JWT 파싱 오류:", e);
+      return {};
+    }
+  };
+
+  // Steam Callback 처리 수정
   const handleSteamCallback = async () => {
     try {
       const params = new URLSearchParams(window.location.search);
-      const steamId = params.get("steamid"); // ✅ Steam 로그인 후 받은 steamid 가져오기
+      const steamId = params.get("steamid");
 
       if (!steamId) {
         throw new Error("Steam ID를 찾을 수 없습니다.");
       }
 
-      // ✅ Steam ID를 사용하여 JWT 토큰 요청
       const response = await axios.post(`${BASE_URL}/account/steamlogin/`, { steam_id: steamId });
 
-      const { access, refresh, user_id } = response.data;
+      const { access, refresh } = response.data;
 
       if (access && refresh) {
         localStorage.setItem("access_token", access);
         localStorage.setItem("refresh_token", refresh);
 
-        // ✅ AuthContext의 로그인 함수 호출 (우측 상단 UI 변경)
+        // JWT 토큰에서 user_id 가져오기
+        const user_id = parseJwt(access).user_id;
         login(access, user_id);
 
-        navigate("/mypage"); // 마이페이지로 이동
+        navigate("/mypage");
       } else {
         throw new Error("JWT 토큰이 응답에 없습니다.");
       }
