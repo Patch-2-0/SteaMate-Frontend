@@ -21,7 +21,6 @@ const Header = () => {
     const refreshToken = localStorage.getItem("refresh_token");
 
     if (!accessToken || !refreshToken) {
-      console.error("🚨 로그아웃 실패: JWT 토큰이 없습니다.");
       return;
     }
 
@@ -42,7 +41,6 @@ const Header = () => {
       logout();
       navigate("/");
     } catch (err) {
-      console.error("🚨 로그아웃 실패:", err.response?.data || err);
     }
   };
 

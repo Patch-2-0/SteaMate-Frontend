@@ -70,8 +70,6 @@ const Login = () => {
         throw new Error("JWT 토큰이 응답에 없습니다.");
       }
     } catch (err) {
-      console.error("🚨 로그인 실패:", err.response?.data || err);
-      
       // 이메일 인증 관련 에러 처리
       if (err.response?.data?.detail) {
         const errorDetail = err.response.data.detail;
@@ -173,9 +171,7 @@ const Login = () => {
       } else {
         throw new Error("JWT 토큰이 응답에 없습니다.");
       }
-    } catch (err) {
-      console.error("🚨 Steam 로그인 처리 실패:", err.response?.data || err);
-      
+    } catch (err) {  
       if (err.response?.data?.error) {
         setError(err.response.data.error);
       } else {

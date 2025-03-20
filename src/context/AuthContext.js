@@ -31,7 +31,6 @@ export const AuthProvider = ({ children }) => {
   // ✅ 로그인 시 상태 즉시 반영
   const login = (newToken, newUserId) => {
     if (!newToken || !newUserId) {
-      console.error("로그인 실패: 올바른 토큰 또는 userId가 없음.");
       return;
     }
 

@@ -73,7 +73,6 @@ export default function ChatbotUI() {
           createNewSession();
         }
       } catch (error) {
-        console.error("Error fetching sessions:", error);
         setError("❌ 세션 목록을 불러올 수 없습니다.");
       }
     };
@@ -139,7 +138,6 @@ export default function ChatbotUI() {
         [newSessionId]: [{ text: "안녕하세요! Steam 게임 추천 챗봇입니다. \n MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! ", sender: "bot" }]
       }));
     } catch (error) {
-      console.error("Error creating session:", error);
       setError("❌ 세션을 생성할 수 없습니다.");
     }
   };
@@ -197,7 +195,6 @@ export default function ChatbotUI() {
         };
       });
     } catch (error) {
-      console.error("Error sending message:", error);
       setMessages(prev => ({
         ...prev,
         [activeSessionId]: [...(prev[activeSessionId] || []), 
@@ -244,7 +241,6 @@ export default function ChatbotUI() {
         }
       }
     } catch (error) {
-      console.error("Error deleting session:", error);
       setError("❌ 세션을 삭제할 수 없습니다.");
     }
   };
@@ -301,7 +297,6 @@ export default function ChatbotUI() {
       setEditingMessageId(null);
       setEditInput("");
     } catch (error) {
-      console.error("Error editing message:", error);
       setError("❌ 메시지를 수정할 수 없습니다.");
     } finally {
       setIsEditing(false);
@@ -340,7 +335,6 @@ export default function ChatbotUI() {
       });
 
     } catch (error) {
-      console.error("Error deleting message:", error);
       setError("❌ 메시지를 삭제할 수 없습니다.");
     } finally {
       setIsDeleting(null);
