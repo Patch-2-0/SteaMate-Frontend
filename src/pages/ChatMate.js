@@ -7,20 +7,59 @@ import { Send, Plus } from "lucide-react";
 
 const BASE_URL = process.env.REACT_APP_API_URL;
 
-// ✅ 챗봇 응답 포맷팅 함수
+// ✅ 챗봇 응답 포맷팅 함수 수정
 const formatChatbotResponse = (text) => {
   const lines = text.split("\n").filter((line) => line.trim() !== "");
+  const result = [];
+  let currentGame = null;
+  let currentDescription = [];
 
-  return lines.map((line, index) => {
-    if (line.startsWith("추천 게임")) {
-      return (
-        <p key={index} className="font-bold text-blue-600 mt-2">
-          {line.replace("[", "").replace("]", " 🎮")}
+  lines.forEach((line, idx) => {
+    // 게임 제목 처리 (대괄호 안의 텍스트)
+    if (line.match(/^\[.*\]$/)) {
+      // 이전 게임 정보가 있으면 먼저 추가
+      if (currentGame && currentDescription.length > 0) {
+        result.push(
+          <div key={`game-${result.length}`} className="mb-4">
+            <h3 className="text-xl font-bold text-blue-950">{currentGame}</h3>
+            <p className="text-gray-800 mt-1">{currentDescription.join(" ")}</p>
+          </div>
+        );
+      }
+      
+      // 새 게임 시작
+      currentGame = line.replace("[", "").replace("]", "");
+      currentDescription = [];
+    } 
+    // 게임 설명 처리 (- 로 시작하는 라인)
+    else if (line.trim().startsWith("-")) {
+      currentDescription.push(line.trim().substring(1).trim());
+    }
+    // "추천 게임" 텍스트 처리
+    else if (line.startsWith("추천 게임")) {
+      result.push(
+        <p key={`title-${idx}`} className="font-bold text-blue-600 text-lg mt-2 mb-3">
+          {line} 🎮
         </p>
       );
     }
-    return <p key={index} className="text-gray-800">{line}</p>;
+    // 기타 일반 텍스트
+    else {
+      result.push(<p key={`text-${idx}`} className="text-gray-800 mb-2">{line}</p>);
+    }
   });
+
+  // 마지막 게임 정보 추가
+  if (currentGame && currentDescription.length > 0) {
+    result.push(
+      <div key={`game-${result.length}`} className="mb-4">
+        <h3 className="text-xl font-bold text-blue-950">{currentGame}</h3>
+        <p className="text-gray-800 mt-1">{currentDescription.join(" ")}</p>
+      </div>
+    );
+  }
+
+  return result;
 };
 
 export default function ChatbotUI() {
