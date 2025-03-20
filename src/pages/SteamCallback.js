@@ -49,7 +49,6 @@ const SteamCallback = () => {
               return;
             }
           } catch (error) {
-            console.error('스팀 계정 연동 실패:', error);
             alert(error.response?.data?.error || '스팀 계정 연동에 실패했습니다.');
             navigate('/mypage', { replace: true });
             return;
@@ -84,7 +83,6 @@ const SteamCallback = () => {
           navigate("/login", { replace: true });
         }
       } catch (err) {
-        console.error("Steam 로그인 처리 중 오류:", err);
         navigate("/login", { replace: true });
       }
     };

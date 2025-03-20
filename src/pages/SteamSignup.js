@@ -43,7 +43,6 @@ const SteamSignup = () => {
   // ✅ Steam ID가 없으면 홈으로 리디렉트 방지
   useEffect(() => {
     if (!steamId) {
-      console.error("🚨 Steam ID 없음, 홈으로 이동 방지");
       setError("Steam ID가 없습니다. 다시 로그인해주세요.");
     }
   }, [steamId]);

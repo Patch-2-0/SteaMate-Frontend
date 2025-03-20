@@ -4,8 +4,6 @@ const ErrorPage = () => {
     const [searchParams] = useSearchParams();
     const error = searchParams.get("error");
 
-    console.log("🔍 에러 코드 확인:", error); // ✅ 콘솔에서 error 값 확인
-
     let message = "알 수 없는 오류가 발생했습니다.";
     if (error === "인증 시간이 만료되었습니다. 다시 회원가입해주세요.") 
         message = "인증 시간이 만료되었습니다. 다시 회원가입해주세요.";
