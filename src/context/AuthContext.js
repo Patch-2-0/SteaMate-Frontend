@@ -7,7 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [userId, setUserId] = useState(localStorage.getItem("user_id") || null);
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("access_token"));
 
-  // ✅ localStorage 변경을 감지하여 상태 자동 업데이트
+  // ✅ localStorage 변경 감지 및 자동 동기화
   useEffect(() => {
     const checkToken = () => {
       const storedToken = localStorage.getItem("access_token");
@@ -15,21 +15,20 @@ export const AuthProvider = ({ children }) => {
 
       setToken(storedToken);
       setUserId(storedUserId);
-      setIsLoggedIn(!!storedToken); // token이 없으면 false 설정
+      setIsLoggedIn(!!storedToken);
     };
 
-    // ✅ 다른 탭에서 로그인/로그아웃이 발생하면 반영
     window.addEventListener("storage", checkToken);
-    window.addEventListener("focus", checkToken); // ✅ 현재 탭이 다시 활성화될 때도 체크
-    checkToken(); // ✅ 최초 마운트 시 상태 확인
+    window.addEventListener("focus", checkToken);
+    checkToken();
 
     return () => {
       window.removeEventListener("storage", checkToken);
-      window.removeEventListener("focus", checkToken); // ✅ 메모리 누수 방지
+      window.removeEventListener("focus", checkToken);
     };
   }, []);
 
-  // ✅ 로그인 시 localStorage와 상태 업데이트
+  // ✅ 로그인 시 상태 즉시 반영
   const login = (newToken, newUserId) => {
     if (!newToken || !newUserId) {
       console.error("로그인 실패: 올바른 토큰 또는 userId가 없음.");
@@ -44,7 +43,7 @@ export const AuthProvider = ({ children }) => {
     setIsLoggedIn(true);
   };
 
-  // ✅ 로그아웃 시 localStorage와 상태 초기화
+  // ✅ 로그아웃 시 상태 초기화
   const logout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
@@ -54,6 +53,14 @@ export const AuthProvider = ({ children }) => {
     setUserId(null);
     setIsLoggedIn(false);
   };
+
+  // ✅ 로그인 상태가 변경될 때마다 `useEffect`로 즉시 반영
+  useEffect(() => {
+    if (isLoggedIn) {
+      setToken(localStorage.getItem("access_token"));
+      setUserId(localStorage.getItem("user_id"));
+    }
+  }, [isLoggedIn]); // 로그인 상태 변경 감지
 
   return (
     <AuthContext.Provider value={{ token, userId, isLoggedIn, login, logout }}>
