@@ -157,14 +157,19 @@ const Login = () => {
 
       const { access, refresh, user_id } = response.data;
 
-      if (access && refresh) {
+      if (access && refresh && user_id) {
         localStorage.setItem("access_token", access);
         localStorage.setItem("refresh_token", refresh);
-
-        // ✅ AuthContext의 로그인 함수 호출 (우측 상단 UI 변경)
+        localStorage.setItem("user_id", user_id);
+      
+        // ✅ storage 이벤트 강제 발생 -> 다른 컴포넌트에서도 로그인 상태 감지 가능
+        window.dispatchEvent(new Event("storage"));
+      
+        // ✅ AuthContext의 로그인 함수 호출
         login(access, user_id);
-
-        navigate("/mypage"); // 마이페이지로 이동
+      
+        // ✅ 로그인 후 리디렉션 (replace: true -> 뒤로 가기 방지)
+        navigate("/", { replace: true });
       } else {
         throw new Error("JWT 토큰이 응답에 없습니다.");
       }
