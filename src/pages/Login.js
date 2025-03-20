@@ -173,7 +173,7 @@ const Login = () => {
 
       const { access, refresh } = response.data;
 
-      if (access && refresh && user_id) {
+      if (access && refresh) {
         localStorage.setItem("access_token", access);
         localStorage.setItem("refresh_token", refresh);
 
@@ -185,7 +185,7 @@ const Login = () => {
       } else {
         throw new Error("JWT 토큰이 응답에 없습니다.");
       }
-    } catch (err) {  
+    } catch (err) {
       if (err.response?.data?.error) {
         setError(err.response.data.error);
       } else {
