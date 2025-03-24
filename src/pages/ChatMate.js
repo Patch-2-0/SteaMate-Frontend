@@ -79,6 +79,7 @@ export default function ChatbotUI() {
   const sessionCreated = useRef(false); // ✅ 세션 생성 여부 추적
   const wsRef = useRef(null);  // 웹소켓 연결 참조
   const [isConnected, setIsConnected] = useState(false);  // 웹소켓 연결 상태
+  const [isBotResponding, setIsBotResponding] = useState(false);  // 상태 추가
 
   // 세션 목록 불러오기
   useEffect(() => {
@@ -210,6 +211,7 @@ export default function ChatbotUI() {
             
             if (data.status === 'error') {
               setError(data.message);
+              setIsBotResponding(false);  // 에러 시 봇 응답 종료
               return;
             }
 
@@ -220,9 +222,7 @@ export default function ChatbotUI() {
             if (data.response !== undefined) {
               setMessages(prev => {
                 const sessionMessages = [...(prev[activeSessionId] || [])];
-                // 처리 중 메시지 제거
                 const filteredMessages = sessionMessages.filter(msg => !msg.isProcessing);
-
                 const lastMessage = filteredMessages[filteredMessages.length - 1];
 
                 if (data.is_streaming) {
@@ -245,6 +245,7 @@ export default function ChatbotUI() {
                       sender: 'bot',
                       isStreaming: false
                     };
+                    setIsBotResponding(false);  // 스트리밍이 끝나면 봇 응답 종료
                   }
                 }
 
@@ -257,6 +258,7 @@ export default function ChatbotUI() {
           } catch (error) {
             console.error('메시지 처리 중 오류:', error);
             setError('메시지 처리 중 오류가 발생했습니다.');
+            setIsBotResponding(false);  // 에러 시 봇 응답 종료
           }
         };
 
@@ -301,6 +303,10 @@ export default function ChatbotUI() {
 
   // sendMessage 함수 수정
   const sendMessage = async () => {
+    if (isBotResponding) {
+      return;  // 봇이 응답 중일 때는 메시지 전송 불가
+    }
+
     if (input.trim() === "" || !activeSessionId || !isConnected) {
       setError("❌ 연결 상태를 확인해주세요.");
       return;
@@ -310,6 +316,7 @@ export default function ChatbotUI() {
     setInput("");
     setError(null);
     setIsSending(true);
+    setIsBotResponding(true);  // 봇 응답 시작
 
     // 사용자 메시지 즉시 UI에 추가
     setMessages(prev => ({
@@ -328,11 +335,19 @@ export default function ChatbotUI() {
     } catch (error) {
       setError("❌ 메시지 전송에 실패했습니다.");
       setIsSending(false);
+      setIsBotResponding(false);  // 에러 시 봇 응답 종료
       // 처리 중 메시지 제거
       setMessages(prev => ({
         ...prev,
         [activeSessionId]: prev[activeSessionId].filter(msg => !msg.isProcessing)
       }));
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !isBotResponding) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
@@ -473,14 +488,6 @@ export default function ChatbotUI() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault(); // 기본 동작 방지 (예: 폼 자동 제출)
-      sendMessage(); // ✅ 메시지 전송 함수 호출
-    }
-  };
-  
-
   // 메시지가 변경될 때마다 스크롤
   useEffect(() => {
     scrollToBottom();
@@ -550,7 +557,7 @@ export default function ChatbotUI() {
                   {msg.sender === "bot" && (
                     <img src="/robot-avatar.gif" alt="Bot" className="w-12 h-12 rounded-xl flex-shrink-0 mt-1" />
                   )}
-                  <div className={`relative group max-w-[80%] ${msg.sender === "user" ? "self-end" : "self-start"}`}>
+                  <div className={`relative group ${msg.sender === "user" ? "max-w-[80%]" : "max-w-[85%]"}`}>
                     {editingMessageId === msg.messageId && msg.sender === "user" ? (
                       <div className="flex flex-col gap-2 w-[400px]">
                         <Input
@@ -641,7 +648,9 @@ export default function ChatbotUI() {
             <form 
               onSubmit={(e) => { 
                 e.preventDefault(); 
-                sendMessage(); 
+                if (!isBotResponding) {
+                  sendMessage(); 
+                }
               }} 
               className="flex items-center w-full max-w-4xl border border-gray-300 rounded-lg p-3 bg-white shadow-md">
               <Input 
@@ -649,14 +658,14 @@ export default function ChatbotUI() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown} 
-                placeholder="메시지를 입력하세요..."
-                disabled={isSending}
+                placeholder={isBotResponding ? "챗봇이 응답하는 중입니다..." : "메시지를 입력하세요..."}
+                disabled={isBotResponding}
                 className="flex-1 border-none focus:ring-0 focus:outline-none px-3"
               />
               <Button 
                 type="submit" 
-                disabled={isSending} 
-                className="ml-2 bg-blue-950 hover:bg-blue-900 text-white p-2 rounded-lg"
+                disabled={isBotResponding}
+                className={`ml-2 ${isBotResponding ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-950 hover:bg-blue-900'} text-white p-2 rounded-lg`}
               >
                 <Send size={20} />
               </Button>
