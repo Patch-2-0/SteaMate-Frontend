@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Send, Plus } from "lucide-react";
 
 const BASE_URL = process.env.REACT_APP_API_URL;
+const WS_URL = process.env.REACT_APP_WS_URL;
 
 // ✅ 챗봇 응답 포맷팅 함수 수정
 const formatChatbotResponse = (text) => {
@@ -76,6 +77,8 @@ export default function ChatbotUI() {
   const [isDeleting, setIsDeleting] = useState(null);
   const messagesEndRef = useRef(null);  // 새로운 ref 추가
   const sessionCreated = useRef(false); // ✅ 세션 생성 여부 추적
+  const wsRef = useRef(null);  // 웹소켓 연결 참조
+  const [isConnected, setIsConnected] = useState(false);  // 웹소켓 연결 상태
 
   // 세션 목록 불러오기
   useEffect(() => {
@@ -181,9 +184,125 @@ export default function ChatbotUI() {
     }
   };
   
+  // 웹소켓 연결 설정
+  useEffect(() => {
+    if (activeSessionId && token) {
+      // 기존 연결 종료
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+
+      try {
+        // 웹소켓 URL에 토큰을 포함
+        const wsUrl = `${WS_URL}${activeSessionId}/?token=${token}`;
+        console.log('Connecting to WebSocket:', wsUrl);
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log('웹소켓 연결됨');
+          setIsConnected(true);
+          setError(null);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            if (data.status === 'error') {
+              setError(data.message);
+              return;
+            }
+
+            if (data.type === 'pong') {
+              return;
+            }
+
+            if (data.response !== undefined) {
+              setMessages(prev => {
+                const sessionMessages = [...(prev[activeSessionId] || [])];
+                // 처리 중 메시지 제거
+                const filteredMessages = sessionMessages.filter(msg => !msg.isProcessing);
+
+                const lastMessage = filteredMessages[filteredMessages.length - 1];
+
+                if (data.is_streaming) {
+                  if (lastMessage && lastMessage.sender === 'bot' && lastMessage.isStreaming) {
+                    filteredMessages[filteredMessages.length - 1] = {
+                      ...lastMessage,
+                      text: data.response
+                    };
+                  } else {
+                    filteredMessages.push({
+                      text: data.response,
+                      sender: 'bot',
+                      isStreaming: true
+                    });
+                  }
+                } else {
+                  if (lastMessage && lastMessage.sender === 'bot' && lastMessage.isStreaming) {
+                    filteredMessages[filteredMessages.length - 1] = {
+                      text: data.response,
+                      sender: 'bot',
+                      isStreaming: false
+                    };
+                  }
+                }
+
+                return {
+                  ...prev,
+                  [activeSessionId]: filteredMessages
+                };
+              });
+            }
+          } catch (error) {
+            console.error('메시지 처리 중 오류:', error);
+            setError('메시지 처리 중 오류가 발생했습니다.');
+          }
+        };
+
+        ws.onclose = (event) => {
+          console.log('웹소켓 연결 종료', event.code, event.reason);
+          setIsConnected(false);
+          
+          // 비정상 종료 코드에 따른 에러 메시지
+          if (event.code === 4003) {
+            setError('인증에 실패했습니다. 다시 로그인해주세요.');
+          } else if (event.code !== 1000) {
+            setError('연결이 종료되었습니다. 페이지를 새로고침해주세요.');
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('웹소켓 에러:', error);
+          setError('연결 중 오류가 발생했습니다.');
+        };
+
+        wsRef.current = ws;
+
+        // 연결 유지를 위한 ping (30초마다)
+        const pingInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 30000);
+
+        return () => {
+          clearInterval(pingInterval);
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.close(1000, '정상 종료');
+          }
+        };
+      } catch (error) {
+        console.error('웹소켓 설정 오류:', error);
+        setError('웹소켓 연결을 설정할 수 없습니다.');
+      }
+    }
+  }, [activeSessionId, token]);
+
+  // sendMessage 함수 수정
   const sendMessage = async () => {
-    if (input.trim() === "" || !activeSessionId) {
-      setError("❌ 세션이 없습니다. 새로고침 해주세요.");
+    if (input.trim() === "" || !activeSessionId || !isConnected) {
+      setError("❌ 연결 상태를 확인해주세요.");
       return;
     }
 
@@ -197,51 +316,23 @@ export default function ChatbotUI() {
       ...prev,
       [activeSessionId]: [...(prev[activeSessionId] || []), 
         { text: currentInput, sender: "user" },
-        { text: "게임 추천을 위해 열심히 생각하고 있어요! \n🎮 10~20초 정도 걸릴 것 같아요~", sender: "bot", isLoading: true }
+        { text: "게임을 찾고 있어요. 잠시만 기다려주세요! 🎮", sender: "bot", isProcessing: true }
       ]
     }));
 
     try {
-      const response = await fetch(`${BASE_URL}/chat/${activeSessionId}/message/`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ user_message: currentInput }),
-      });
-
-      if (!response.ok) throw new Error("메시지 전송 실패");
-
-      const data = await response.json();
-      
-      // 마지막 사용자 메시지를 업데이트하고 봇 응답 추가
-      setMessages(prev => {
-        const messages = [...prev[activeSessionId]];
-        messages[messages.length - 2] = { 
-          text: currentInput, 
-          sender: "user", 
-          messageId: data.data.id 
-        };
-        messages[messages.length - 1] = { 
-          text: data.data.chatbot_message, 
-          sender: "bot",
-          isLoading: false
-        };
-        return {
-          ...prev,
-          [activeSessionId]: messages
-        };
-      });
+      // 웹소켓으로 메시지 전송
+      wsRef.current.send(JSON.stringify({
+        message: currentInput
+      }));
     } catch (error) {
+      setError("❌ 메시지 전송에 실패했습니다.");
+      setIsSending(false);
+      // 처리 중 메시지 제거
       setMessages(prev => ({
         ...prev,
-        [activeSessionId]: [...(prev[activeSessionId] || []), 
-          { text: "❌ 응답을 받을 수 없습니다.", sender: "bot" }
-        ]
+        [activeSessionId]: prev[activeSessionId].filter(msg => !msg.isProcessing)
       }));
-    } finally {
-      setIsSending(false);
     }
   };
 
@@ -296,19 +387,14 @@ export default function ChatbotUI() {
     setIsEditing(true);
 
     try {
-      const response = await fetch(`${BASE_URL}/chat/${activeSessionId}/message/${messageId}/`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_message: editInput }),
-      });
+      // 웹소켓으로 메시지 수정 요청 전송
+      wsRef.current.send(JSON.stringify({
+        type: 'message_modify',
+        message_id: messageId,
+        new_message: editInput
+      }));
 
-      if (!response.ok) throw new Error("메시지 수정 실패");
-
-      const data = await response.json();
-      
+      // 임시로 UI 업데이트
       setMessages(prev => {
         const sessionMessages = [...prev[activeSessionId]];
         const messageIndex = sessionMessages.findIndex(
@@ -321,9 +407,11 @@ export default function ChatbotUI() {
             sender: "user", 
             messageId: messageId 
           };
+          // 챗봇 응답은 웹소켓으로 받을 때까지 "수정 중..." 표시
           sessionMessages[messageIndex + 1] = { 
-            text: data.data.chatbot_message, 
-            sender: "bot" 
+            text: "메시지를 수정하고 있어요. 잠시만 기다려주세요! 🎮", 
+            sender: "bot",
+            isProcessing: true 
           };
         }
         
@@ -464,39 +552,42 @@ export default function ChatbotUI() {
                   )}
                   <div className={`relative group max-w-[80%] ${msg.sender === "user" ? "self-end" : "self-start"}`}>
                     {editingMessageId === msg.messageId && msg.sender === "user" ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 w-[400px]">
                         <Input
                           value={editInput}
                           onChange={(e) => setEditInput(e.target.value)}
-                          className="min-w-[200px]"
+                          className="w-full"
                           autoFocus
                           disabled={isEditing}
                         />
-                        <Button 
-                          onClick={() => saveEditedMessage(msg.messageId)}
-                          size="sm"
-                          disabled={isEditing}
-                        >
-                          {isEditing ? (
-                            <div className="flex items-center gap-2">
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                              질문중...
-                            </div>
-                          ) : (
-                            "수정"
-                          )}
-                        </Button>
-                        <Button 
-                          onClick={() => {
-                            setEditingMessageId(null);
-                            setEditInput("");
-                          }}
-                          variant="outline"
-                          size="sm"
-                          disabled={isEditing}
-                        >
-                          취소
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            onClick={() => saveEditedMessage(msg.messageId)}
+                            size="sm"
+                            disabled={isEditing}
+                            className="bg-blue-950 hover:bg-blue-900 text-white min-w-[60px]"
+                          >
+                            {isEditing ? (
+                              <div className="flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                                수정중...
+                              </div>
+                            ) : (
+                              "수정"
+                            )}
+                          </Button>
+                          <Button 
+                            onClick={() => {
+                              setEditingMessageId(null);
+                              setEditInput("");
+                            }}
+                            size="sm"
+                            disabled={isEditing}
+                            className="bg-gray-500 hover:bg-gray-600 text-white min-w-[60px]"
+                          >
+                            취소
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <div
@@ -507,26 +598,23 @@ export default function ChatbotUI() {
                         {msg.sender === "bot" ? (
                           <div className="flex items-start gap-2">
                             <div>{formatChatbotResponse(msg.text)}</div>
-                            {msg.isLoading && (
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-transparent mt-1" />
-                            )}
                           </div>
                         ) : (
                           msg.text
                         )}
                         
                         {msg.sender === "user" && msg.messageId && (
-                          <div className="absolute -left-16 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-3">
+                          <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-3">
                             <button
                               onClick={() => editMessage(msg.messageId, msg.text)}
-                              className="text-gray-500 hover:text-blue-950"
+                              className="text-gray-500 hover:text-blue-950 bg-white rounded-full p-1"
                               disabled={isDeleting === msg.messageId}
                             >
                               ✎
                             </button>
                             <button
                               onClick={() => deleteMessage(msg.messageId)}
-                              className="text-gray-500 hover:text-red-500"
+                              className="text-gray-500 hover:text-red-500 bg-white rounded-full p-1"
                               disabled={isDeleting === msg.messageId}
                             >
                               {isDeleting === msg.messageId ? (
