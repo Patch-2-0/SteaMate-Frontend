@@ -223,7 +223,6 @@ export default function MyPage() {
     setSyncError(null);
     
     try {
-      // steamlibrary 엔드포인트 사용
       const response = await fetch(`${BASE_URL}/account/steamlibrary/`, {
         method: 'POST',
         headers: {
@@ -232,37 +231,38 @@ export default function MyPage() {
         }
       });
 
-      // 응답이 JSON이 아닌 경우 처리
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('서버 응답 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-      }
-
       if (!response.ok) {
         const errorData = await response.json();
-        
-        // Steam 프로필 비공개 에러
-        if (errorData.message && errorData.message.includes('공개 설정')) {
-          throw new Error('Steam 프로필이 비공개 상태입니다. Steam 프로필 설정에서 "게임 세부 정보"를 공개로 설정해주세요.');
-        }
-        
-        // 기타 에러
         throw new Error(errorData.message || '라이브러리 동기화에 실패했습니다.');
       }
 
-      await fetchUserData(); // 사용자 데이터 새로고침
-      // 연동 과정 중 자동 동기화인 경우 alert를 표시하지 않도록 수정
-      // 개별적으로 동기화 버튼을 클릭한 경우에만 alert 표시
-      const isAutoSync = new URLSearchParams(window.location.search).get('steam_id');
-      if (!isAutoSync) {
-        alert('스팀 라이브러리가 성공적으로 동기화되었습니다!');
+      // 데이터가 업데이트될 때까지 주기적으로 확인
+      const checkData = async () => {
+        await fetchUserData();
+        // preferred_game 데이터가 있는지 확인
+        if (userData?.preferred_game?.length > 0) {
+          const isAutoSync = new URLSearchParams(window.location.search).get('steam_id');
+          if (!isAutoSync) {
+            alert('스팀 라이브러리가 성공적으로 동기화되었습니다!');
+          }
+          return true;
+        }
+        return false;
+      };
+
+      // 최대 10번, 3초 간격으로 확인
+      for (let i = 0; i < 10; i++) {
+        const isComplete = await checkData();
+        if (isComplete) break;
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
+
     } catch (error) {
       setSyncError(error.message);
     } finally {
       setIsSyncing(false);
     }
-  }, [token, fetchUserData]);
+  }, [token, fetchUserData, userData]);
 
   // 자동 동기화를 위한 useEffect 추가
   useEffect(() => {
