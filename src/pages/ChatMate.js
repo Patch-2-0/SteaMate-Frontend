@@ -10,20 +10,62 @@ const WS_URL = process.env.REACT_APP_WS_URL;
 
 // ✅ 챗봇 응답 포맷팅 함수 수정
 const formatChatbotResponse = (text) => {
-  const lines = text.split("\n").filter((line) => line.trim() !== "");
+  // text가 undefined인 경우 빈 배열 반환
+  if (!text) return [];
+
+  // 초기 인사말인 경우 바로 반환
+  if (text.startsWith("안녕하세요!")) {
+    return [
+      <p key="greeting" className="text-gray-800">
+        {text.split('\n').map((line, i) => (
+          <span key={i}>
+            {line}
+            {i === 0 && <br />}
+          </span>
+        ))}
+      </p>
+    ];
+  }
+
+  const lines = text.split("\n").filter((line) => line && line.trim() !== "");
   const result = [];
   let currentGame = null;
   let currentDescription = [];
-  let finalMessage = null;  // 마지막 멘트를 저장할 변수
+  let currentGameLink = null;
+  let currentImageLink = null;
+  let finalMessage = null;
 
   lines.forEach((line, idx) => {
-    // 게임 제목 처리 (대괄호 안의 텍스트)
+    // 빈 라인 무시
+    if (!line || !line.trim()) return;
+
+    // 게임 제목 처리
     if (line.match(/^\[.*\]$/)) {
       // 이전 게임 정보가 있으면 먼저 추가
       if (currentGame && currentDescription.length > 0) {
         result.push(
-          <div key={`game-${result.length}`} className="mb-4">
-            <h3 className="text-xl font-bold text-blue-950">{currentGame}</h3>
+          <div key={`game-${result.length}`} className="mb-6">
+            <h3 className="text-xl font-bold text-blue-950 mb-2">
+              <a href={currentGameLink} target="_blank" rel="noopener noreferrer" 
+                 className="hover:text-blue-700 transition-colors">
+                {currentGame}
+              </a>
+            </h3>
+            {currentImageLink && currentGameLink && (
+              <a 
+                href={currentGameLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block hover:opacity-90 transition-opacity"
+              >
+                <img 
+                  src={currentImageLink} 
+                  alt={currentGame} 
+                  className="w-full rounded-lg mb-2 shadow-md cursor-pointer"
+                  loading="lazy"
+                />
+              </a>
+            )}
             <p className="text-gray-800 mt-1">{currentDescription.join(" ")}</p>
           </div>
         );
@@ -32,10 +74,23 @@ const formatChatbotResponse = (text) => {
       // 새 게임 시작
       currentGame = line.replace("[", "").replace("]", "");
       currentDescription = [];
+      currentGameLink = null;
+      currentImageLink = null;
     } 
-    // 게임 설명 처리 (- 로 시작하는 라인)
-    else if (line.trim().startsWith("-")) {
-      currentDescription.push(line.trim().substring(1).trim());
+    // 바로가기 링크 처리
+    else if (line.includes("바로가기 링크 :")) {
+      currentGameLink = line.split(": ")[1]?.trim() || null;
+    }
+    // 이미지 링크 처리
+    else if (line.includes("이미지 링크 :")) {
+      currentImageLink = line.split(": ")[1]?.trim() || null;
+    }
+    // 추천 이유 및 설명 처리
+    else if (line.includes("추천 이유 및 설명:")) {
+      const description = line.split("추천 이유 및 설명:")[1]?.trim();
+      if (description) {
+        currentDescription.push(description);
+      }
     }
     // "추천 게임" 텍스트 처리
     else if (line.startsWith("추천 게임")) {
@@ -46,7 +101,7 @@ const formatChatbotResponse = (text) => {
       );
     }
     // 일반 텍스트는 마지막 멘트로 저장
-    else {
+    else if (!line.includes("이미지 링크 :") && !line.includes("바로가기 링크 :")) {
       finalMessage = line;
     }
   });
@@ -54,8 +109,28 @@ const formatChatbotResponse = (text) => {
   // 마지막 게임 정보 추가
   if (currentGame && currentDescription.length > 0) {
     result.push(
-      <div key={`game-${result.length}`} className="mb-4">
-        <h3 className="text-xl font-bold text-blue-950">{currentGame}</h3>
+      <div key={`game-${result.length}`} className="mb-6">
+        <h3 className="text-xl font-bold text-blue-950 mb-2">
+          <a href={currentGameLink} target="_blank" rel="noopener noreferrer" 
+             className="hover:text-blue-700 transition-colors">
+            {currentGame}
+          </a>
+        </h3>
+        {currentImageLink && currentGameLink && (
+          <a 
+            href={currentGameLink} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block hover:opacity-90 transition-opacity"
+          >
+            <img 
+              src={currentImageLink} 
+              alt={currentGame} 
+              className="w-full rounded-lg mb-2 shadow-md cursor-pointer"
+              loading="lazy"
+            />
+          </a>
+        )}
         <p className="text-gray-800 mt-1">{currentDescription.join(" ")}</p>
       </div>
     );
@@ -150,7 +225,10 @@ export default function ChatbotUI() {
       
       // 정렬된 메시지를 현재 형식에 맞게 변환
       const formattedMessages = [
-        { text: "안녕하세요! Steam 게임 추천 챗봇입니다. \n MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! ", sender: "bot" },
+        { 
+          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!", 
+          sender: "bot" 
+        },
         ...sortedMessages.map(msg => ([
           { text: msg.user_message, sender: "user", messageId: msg.id },
           { text: msg.chatbot_message, sender: "bot" }
@@ -191,7 +269,10 @@ export default function ChatbotUI() {
       setActiveSessionId(newSessionId); // ✅ 생성된 세션을 활성화
       setMessages(prev => ({
         ...prev,
-        [newSessionId]: [{ text: "안녕하세요! Steam 게임 추천 챗봇입니다. \n MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! ", sender: "bot" }]
+        [newSessionId]: [{ 
+          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!", 
+          sender: "bot" 
+        }]
       }));
     } catch (error) {
       setError("❌ 세션을 생성할 수 없습니다.");
