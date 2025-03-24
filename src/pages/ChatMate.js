@@ -14,6 +14,7 @@ const formatChatbotResponse = (text) => {
   const result = [];
   let currentGame = null;
   let currentDescription = [];
+  let finalMessage = null;  // 마지막 멘트를 저장할 변수
 
   lines.forEach((line, idx) => {
     // 게임 제목 처리 (대괄호 안의 텍스트)
@@ -44,9 +45,9 @@ const formatChatbotResponse = (text) => {
         </p>
       );
     }
-    // 기타 일반 텍스트
+    // 일반 텍스트는 마지막 멘트로 저장
     else {
-      result.push(<p key={`text-${idx}`} className="text-gray-800 mb-2">{line}</p>);
+      finalMessage = line;
     }
   });
 
@@ -57,6 +58,13 @@ const formatChatbotResponse = (text) => {
         <h3 className="text-xl font-bold text-blue-950">{currentGame}</h3>
         <p className="text-gray-800 mt-1">{currentDescription.join(" ")}</p>
       </div>
+    );
+  }
+
+  // 마지막 멘트가 있다면 마지막에 추가
+  if (finalMessage) {
+    result.push(
+      <p key="final-message" className="text-gray-800 mt-4">{finalMessage}</p>
     );
   }
 
@@ -345,9 +353,15 @@ export default function ChatbotUI() {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !isBotResponding) {
-      e.preventDefault();
-      sendMessage();
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        return; // 쉬프트+엔터는 기본 동작 유지 (줄바꿈)
+      } else {
+        e.preventDefault(); // 일반 엔터는 기본 동작 방지
+        if (!isBotResponding) {
+          sendMessage();
+        }
+      }
     }
   };
 
@@ -653,14 +667,14 @@ export default function ChatbotUI() {
                 }
               }} 
               className="flex items-center w-full max-w-4xl border border-gray-300 rounded-lg p-3 bg-white shadow-md">
-              <Input 
-                type="text"
+              <textarea 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown} 
                 placeholder={isBotResponding ? "챗봇이 응답하는 중입니다..." : "메시지를 입력하세요..."}
                 disabled={isBotResponding}
-                className="flex-1 border-none focus:ring-0 focus:outline-none px-3"
+                className="flex-1 border-none focus:ring-0 focus:outline-none px-3 resize-none min-h-[40px] max-h-[120px] overflow-y-auto py-2 leading-normal"
+                rows="1"
               />
               <Button 
                 type="submit" 
