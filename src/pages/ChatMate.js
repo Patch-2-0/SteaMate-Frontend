@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Send, Plus } from "lucide-react";
 
 const BASE_URL = process.env.REACT_APP_API_URL;
+const WS_URL = process.env.REACT_APP_WS_URL;
 
 // ✅ 챗봇 응답 포맷팅 함수 수정
 const formatChatbotResponse = (text) => {
@@ -13,6 +14,7 @@ const formatChatbotResponse = (text) => {
   const result = [];
   let currentGame = null;
   let currentDescription = [];
+  let finalMessage = null;  // 마지막 멘트를 저장할 변수
 
   lines.forEach((line, idx) => {
     // 게임 제목 처리 (대괄호 안의 텍스트)
@@ -43,9 +45,9 @@ const formatChatbotResponse = (text) => {
         </p>
       );
     }
-    // 기타 일반 텍스트
+    // 일반 텍스트는 마지막 멘트로 저장
     else {
-      result.push(<p key={`text-${idx}`} className="text-gray-800 mb-2">{line}</p>);
+      finalMessage = line;
     }
   });
 
@@ -56,6 +58,13 @@ const formatChatbotResponse = (text) => {
         <h3 className="text-xl font-bold text-blue-950">{currentGame}</h3>
         <p className="text-gray-800 mt-1">{currentDescription.join(" ")}</p>
       </div>
+    );
+  }
+
+  // 마지막 멘트가 있다면 마지막에 추가
+  if (finalMessage) {
+    result.push(
+      <p key="final-message" className="text-gray-800 mt-4">{finalMessage}</p>
     );
   }
 
@@ -76,6 +85,9 @@ export default function ChatbotUI() {
   const [isDeleting, setIsDeleting] = useState(null);
   const messagesEndRef = useRef(null);  // 새로운 ref 추가
   const sessionCreated = useRef(false); // ✅ 세션 생성 여부 추적
+  const wsRef = useRef(null);  // 웹소켓 연결 참조
+  const [isConnected, setIsConnected] = useState(false);  // 웹소켓 연결 상태
+  const [isBotResponding, setIsBotResponding] = useState(false);  // 상태 추가
 
   // 세션 목록 불러오기
   useEffect(() => {
@@ -131,10 +143,15 @@ export default function ChatbotUI() {
       if (!response.ok) throw new Error("대화 내역 조회 실패");
 
       const data = await response.json();
-      // 서버에서 받은 메시지를 현재 형식에 맞게 변환하고 메시지 ID 포함
+      // 서버에서 받은 메시지를 시간순으로 정렬
+      const sortedMessages = data.data.sort((a, b) => 
+        new Date(a.created_at) - new Date(b.created_at)
+      );
+      
+      // 정렬된 메시지를 현재 형식에 맞게 변환
       const formattedMessages = [
         { text: "안녕하세요! Steam 게임 추천 챗봇입니다. \n MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! ", sender: "bot" },
-        ...data.data.map(msg => ([
+        ...sortedMessages.map(msg => ([
           { text: msg.user_message, sender: "user", messageId: msg.id },
           { text: msg.chatbot_message, sender: "bot" }
         ])).flat()
@@ -181,9 +198,134 @@ export default function ChatbotUI() {
     }
   };
   
+  // 웹소켓 연결 설정
+  useEffect(() => {
+    if (activeSessionId && token) {
+      // 기존 연결 종료
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+
+      try {
+        // 웹소켓 URL에 토큰을 포함
+        const wsUrl = `${WS_URL}${activeSessionId}/?token=${token}`;
+        console.log('Connecting to WebSocket:', wsUrl);
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log('웹소켓 연결됨');
+          setIsConnected(true);
+          setError(null);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            if (data.status === 'error') {
+              setError(data.message);
+              setIsBotResponding(false);
+              return;
+            }
+
+            if (data.type === 'pong') {
+              return;
+            }
+
+            if (data.response !== undefined) {
+              setMessages(prev => {
+                const sessionMessages = [...(prev[activeSessionId] || [])];
+                const messageIndex = sessionMessages.findIndex(msg => 
+                  msg.sender === 'bot' && (msg.isProcessing || msg.isStreaming)
+                );
+
+                if (messageIndex !== -1) {
+                  // 처리 중이거나 스트리밍 중인 메시지를 찾아서 업데이트
+                  sessionMessages[messageIndex] = {
+                    text: data.response,
+                    sender: 'bot',
+                    isStreaming: data.is_streaming
+                  };
+
+                  if (!data.is_streaming) {
+                    setIsBotResponding(false);
+                  }
+                } else if (data.is_streaming) {
+                  // 처리 중인 메시지를 찾지 못했다면 새로 추가
+                  sessionMessages.push({
+                    text: data.response,
+                    sender: 'bot',
+                    isStreaming: true
+                  });
+                } else {
+                  // 스트리밍이 아닌 일반 메시지
+                  sessionMessages.push({
+                    text: data.response,
+                    sender: 'bot'
+                  });
+                  setIsBotResponding(false);
+                }
+
+                return {
+                  ...prev,
+                  [activeSessionId]: sessionMessages
+                };
+              });
+            }
+          } catch (error) {
+            console.error('메시지 처리 중 오류:', error);
+            setError('메시지 처리 중 오류가 발생했습니다.');
+            setIsBotResponding(false);
+          }
+        };
+
+        ws.onclose = (event) => {
+          console.log('웹소켓 연결 종료', event.code, event.reason);
+          setIsConnected(false);
+          
+          // 비정상 종료 코드에 따른 에러 메시지
+          if (event.code === 4003) {
+            setError('인증에 실패했습니다. 다시 로그인해주세요.');
+          } else if (event.code !== 1000) {
+            setError('연결이 종료되었습니다. 페이지를 새로고침해주세요.');
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('웹소켓 에러:', error);
+          setError('연결 중 오류가 발생했습니다.');
+        };
+
+        wsRef.current = ws;
+
+        // 연결 유지를 위한 ping (30초마다)
+        const pingInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 30000);
+
+        return () => {
+          clearInterval(pingInterval);
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.close(1000, '정상 종료');
+          }
+        };
+      } catch (error) {
+        console.error('웹소켓 설정 오류:', error);
+        setError('웹소켓 연결을 설정할 수 없습니다.');
+      }
+    }
+  }, [activeSessionId, token]);
+
+  // sendMessage 함수 수정
   const sendMessage = async () => {
-    if (input.trim() === "" || !activeSessionId) {
-      setError("❌ 세션이 없습니다. 새로고침 해주세요.");
+    if (isBotResponding) {
+      return;  // 봇이 응답 중일 때는 메시지 전송 불가
+    }
+
+    if (input.trim() === "" || !activeSessionId || !isConnected) {
+      setError("❌ 연결 상태를 확인해주세요.");
       return;
     }
 
@@ -191,57 +333,44 @@ export default function ChatbotUI() {
     setInput("");
     setError(null);
     setIsSending(true);
+    setIsBotResponding(true);  // 봇 응답 시작
 
     // 사용자 메시지 즉시 UI에 추가
     setMessages(prev => ({
       ...prev,
       [activeSessionId]: [...(prev[activeSessionId] || []), 
         { text: currentInput, sender: "user" },
-        { text: "게임 추천을 위해 열심히 생각하고 있어요! \n🎮 10~20초 정도 걸릴 것 같아요~", sender: "bot", isLoading: true }
+        { text: "게임을 찾고 있어요. 잠시만 기다려주세요! 🎮", sender: "bot", isProcessing: true }
       ]
     }));
 
     try {
-      const response = await fetch(`${BASE_URL}/chat/${activeSessionId}/message/`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ user_message: currentInput }),
-      });
-
-      if (!response.ok) throw new Error("메시지 전송 실패");
-
-      const data = await response.json();
-      
-      // 마지막 사용자 메시지를 업데이트하고 봇 응답 추가
-      setMessages(prev => {
-        const messages = [...prev[activeSessionId]];
-        messages[messages.length - 2] = { 
-          text: currentInput, 
-          sender: "user", 
-          messageId: data.data.id 
-        };
-        messages[messages.length - 1] = { 
-          text: data.data.chatbot_message, 
-          sender: "bot",
-          isLoading: false
-        };
-        return {
-          ...prev,
-          [activeSessionId]: messages
-        };
-      });
+      // 웹소켓으로 메시지 전송
+      wsRef.current.send(JSON.stringify({
+        message: currentInput
+      }));
     } catch (error) {
+      setError("❌ 메시지 전송에 실패했습니다.");
+      setIsSending(false);
+      setIsBotResponding(false);  // 에러 시 봇 응답 종료
+      // 처리 중 메시지 제거
       setMessages(prev => ({
         ...prev,
-        [activeSessionId]: [...(prev[activeSessionId] || []), 
-          { text: "❌ 응답을 받을 수 없습니다.", sender: "bot" }
-        ]
+        [activeSessionId]: prev[activeSessionId].filter(msg => !msg.isProcessing)
       }));
-    } finally {
-      setIsSending(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        return; // 쉬프트+엔터는 기본 동작 유지 (줄바꿈)
+      } else {
+        e.preventDefault(); // 일반 엔터는 기본 동작 방지
+        if (!isBotResponding) {
+          sendMessage();
+        }
+      }
     }
   };
 
@@ -296,42 +425,59 @@ export default function ChatbotUI() {
     setIsEditing(true);
 
     try {
-      const response = await fetch(`${BASE_URL}/chat/${activeSessionId}/message/${messageId}/`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_message: editInput }),
-      });
+      // 현재 세션의 모든 메시지 가져오기
+      const sessionMessages = [...messages[activeSessionId]];
+      const messageIndex = sessionMessages.findIndex(
+        msg => msg.sender === "user" && msg.messageId === messageId
+      );
 
-      if (!response.ok) throw new Error("메시지 수정 실패");
+      if (messageIndex !== -1) {
+        // 수정하려는 메시지 이후의 모든 메시지 ID 수집
+        const messagesToDelete = sessionMessages
+          .slice(messageIndex + 2) // 현재 메시지와 봇 응답 다음부터
+          .filter(msg => msg.sender === "user" && msg.messageId) // 사용자 메시지만 필터링
+          .map(msg => msg.messageId);
 
-      const data = await response.json();
-      
-      setMessages(prev => {
-        const sessionMessages = [...prev[activeSessionId]];
-        const messageIndex = sessionMessages.findIndex(
-          msg => msg.sender === "user" && msg.messageId === messageId
-        );
-        
-        if (messageIndex !== -1) {
-          sessionMessages[messageIndex] = { 
-            text: editInput, 
-            sender: "user", 
-            messageId: messageId 
+        // 수집된 메시지들 삭제 요청
+        await Promise.all(messagesToDelete.map(msgId => 
+          fetch(`${BASE_URL}/chat/${activeSessionId}/message/${msgId}/`, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+        ));
+
+        // 웹소켓으로 메시지 수정 요청 전송
+        wsRef.current.send(JSON.stringify({
+          type: 'message_modify',
+          message_id: messageId,
+          new_message: editInput
+        }));
+
+        // UI 업데이트
+        setMessages(prev => {
+          const updatedMessages = sessionMessages.slice(0, messageIndex);
+          
+          updatedMessages.push(
+            { 
+              text: editInput, 
+              sender: "user", 
+              messageId: messageId 
+            },
+            { 
+              text: "메시지를 수정하고 있어요. 잠시만 기다려주세요! 🎮", 
+              sender: "bot",
+              isProcessing: true 
+            }
+          );
+
+          return {
+            ...prev,
+            [activeSessionId]: updatedMessages
           };
-          sessionMessages[messageIndex + 1] = { 
-            text: data.data.chatbot_message, 
-            sender: "bot" 
-          };
-        }
-        
-        return {
-          ...prev,
-          [activeSessionId]: sessionMessages
-        };
-      });
+        });
+      }
 
       setEditingMessageId(null);
       setEditInput("");
@@ -384,14 +530,6 @@ export default function ChatbotUI() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault(); // 기본 동작 방지 (예: 폼 자동 제출)
-      sendMessage(); // ✅ 메시지 전송 함수 호출
-    }
-  };
-  
 
   // 메시지가 변경될 때마다 스크롤
   useEffect(() => {
@@ -462,41 +600,44 @@ export default function ChatbotUI() {
                   {msg.sender === "bot" && (
                     <img src="/robot-avatar.gif" alt="Bot" className="w-12 h-12 rounded-xl flex-shrink-0 mt-1" />
                   )}
-                  <div className={`relative group max-w-[80%] ${msg.sender === "user" ? "self-end" : "self-start"}`}>
+                  <div className={`relative group ${msg.sender === "user" ? "max-w-[80%]" : "max-w-[85%]"}`}>
                     {editingMessageId === msg.messageId && msg.sender === "user" ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 w-[400px]">
                         <Input
                           value={editInput}
                           onChange={(e) => setEditInput(e.target.value)}
-                          className="min-w-[200px]"
+                          className="w-full"
                           autoFocus
                           disabled={isEditing}
                         />
-                        <Button 
-                          onClick={() => saveEditedMessage(msg.messageId)}
-                          size="sm"
-                          disabled={isEditing}
-                        >
-                          {isEditing ? (
-                            <div className="flex items-center gap-2">
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                              질문중...
-                            </div>
-                          ) : (
-                            "수정"
-                          )}
-                        </Button>
-                        <Button 
-                          onClick={() => {
-                            setEditingMessageId(null);
-                            setEditInput("");
-                          }}
-                          variant="outline"
-                          size="sm"
-                          disabled={isEditing}
-                        >
-                          취소
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            onClick={() => saveEditedMessage(msg.messageId)}
+                            size="sm"
+                            disabled={isEditing}
+                            className="bg-blue-950 hover:bg-blue-900 text-white min-w-[60px]"
+                          >
+                            {isEditing ? (
+                              <div className="flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                                수정중...
+                              </div>
+                            ) : (
+                              "수정"
+                            )}
+                          </Button>
+                          <Button 
+                            onClick={() => {
+                              setEditingMessageId(null);
+                              setEditInput("");
+                            }}
+                            size="sm"
+                            disabled={isEditing}
+                            className="bg-gray-500 hover:bg-gray-600 text-white min-w-[60px]"
+                          >
+                            취소
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <div
@@ -507,26 +648,23 @@ export default function ChatbotUI() {
                         {msg.sender === "bot" ? (
                           <div className="flex items-start gap-2">
                             <div>{formatChatbotResponse(msg.text)}</div>
-                            {msg.isLoading && (
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-transparent mt-1" />
-                            )}
                           </div>
                         ) : (
                           msg.text
                         )}
                         
                         {msg.sender === "user" && msg.messageId && (
-                          <div className="absolute -left-16 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-3">
+                          <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-3">
                             <button
                               onClick={() => editMessage(msg.messageId, msg.text)}
-                              className="text-gray-500 hover:text-blue-950"
+                              className="text-gray-500 hover:text-blue-950 bg-white rounded-full p-1"
                               disabled={isDeleting === msg.messageId}
                             >
                               ✎
                             </button>
                             <button
                               onClick={() => deleteMessage(msg.messageId)}
-                              className="text-gray-500 hover:text-red-500"
+                              className="text-gray-500 hover:text-red-500 bg-white rounded-full p-1"
                               disabled={isDeleting === msg.messageId}
                             >
                               {isDeleting === msg.messageId ? (
@@ -553,22 +691,24 @@ export default function ChatbotUI() {
             <form 
               onSubmit={(e) => { 
                 e.preventDefault(); 
-                sendMessage(); 
+                if (!isBotResponding) {
+                  sendMessage(); 
+                }
               }} 
               className="flex items-center w-full max-w-4xl border border-gray-300 rounded-lg p-3 bg-white shadow-md">
-              <Input 
-                type="text"
+              <textarea 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown} 
-                placeholder="메시지를 입력하세요..."
-                disabled={isSending}
-                className="flex-1 border-none focus:ring-0 focus:outline-none px-3"
+                placeholder={isBotResponding ? "챗봇이 응답하는 중입니다..." : "메시지를 입력하세요..."}
+                disabled={isBotResponding}
+                className="flex-1 border-none focus:ring-0 focus:outline-none px-3 resize-none min-h-[40px] max-h-[120px] overflow-y-auto py-2 leading-normal"
+                rows="1"
               />
               <Button 
                 type="submit" 
-                disabled={isSending} 
-                className="ml-2 bg-blue-950 hover:bg-blue-900 text-white p-2 rounded-lg"
+                disabled={isBotResponding}
+                className={`ml-2 ${isBotResponding ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-950 hover:bg-blue-900'} text-white p-2 rounded-lg`}
               >
                 <Send size={20} />
               </Button>
