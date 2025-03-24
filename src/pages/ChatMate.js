@@ -10,6 +10,20 @@ const WS_URL = process.env.REACT_APP_WS_URL;
 
 // ✅ 챗봇 응답 포맷팅 함수 수정
 const formatChatbotResponse = (text) => {
+  // 초기 인사말인 경우 바로 반환
+  if (text.startsWith("안녕하세요!")) {
+    return [
+      <p key="greeting" className="text-gray-800">
+        {text.split('\n').map((line, i) => (
+          <span key={i}>
+            {line}
+            {i === 0 && <br />} {/* 첫 줄 다음에만 줄바꿈 추가 */}
+          </span>
+        ))}
+      </p>
+    ];
+  }
+
   const lines = text.split("\n").filter((line) => line.trim() !== "");
   const result = [];
   let currentGame = null;
@@ -150,7 +164,10 @@ export default function ChatbotUI() {
       
       // 정렬된 메시지를 현재 형식에 맞게 변환
       const formattedMessages = [
-        { text: "안녕하세요! Steam 게임 추천 챗봇입니다. \n MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! ", sender: "bot" },
+        { 
+          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!", 
+          sender: "bot" 
+        },
         ...sortedMessages.map(msg => ([
           { text: msg.user_message, sender: "user", messageId: msg.id },
           { text: msg.chatbot_message, sender: "bot" }
@@ -191,7 +208,10 @@ export default function ChatbotUI() {
       setActiveSessionId(newSessionId); // ✅ 생성된 세션을 활성화
       setMessages(prev => ({
         ...prev,
-        [newSessionId]: [{ text: "안녕하세요! Steam 게임 추천 챗봇입니다. \n MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! ", sender: "bot" }]
+        [newSessionId]: [{ 
+          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!", 
+          sender: "bot" 
+        }]
       }));
     } catch (error) {
       setError("❌ 세션을 생성할 수 없습니다.");
