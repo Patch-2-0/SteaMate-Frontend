@@ -143,10 +143,15 @@ export default function ChatbotUI() {
       if (!response.ok) throw new Error("대화 내역 조회 실패");
 
       const data = await response.json();
-      // 서버에서 받은 메시지를 현재 형식에 맞게 변환하고 메시지 ID 포함
+      // 서버에서 받은 메시지를 시간순으로 정렬
+      const sortedMessages = data.data.sort((a, b) => 
+        new Date(a.created_at) - new Date(b.created_at)
+      );
+      
+      // 정렬된 메시지를 현재 형식에 맞게 변환
       const formattedMessages = [
         { text: "안녕하세요! Steam 게임 추천 챗봇입니다. \n MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! ", sender: "bot" },
-        ...data.data.map(msg => ([
+        ...sortedMessages.map(msg => ([
           { text: msg.user_message, sender: "user", messageId: msg.id },
           { text: msg.chatbot_message, sender: "bot" }
         ])).flat()
@@ -219,7 +224,7 @@ export default function ChatbotUI() {
             
             if (data.status === 'error') {
               setError(data.message);
-              setIsBotResponding(false);  // 에러 시 봇 응답 종료
+              setIsBotResponding(false);
               return;
             }
 
@@ -230,43 +235,47 @@ export default function ChatbotUI() {
             if (data.response !== undefined) {
               setMessages(prev => {
                 const sessionMessages = [...(prev[activeSessionId] || [])];
-                const filteredMessages = sessionMessages.filter(msg => !msg.isProcessing);
-                const lastMessage = filteredMessages[filteredMessages.length - 1];
+                const messageIndex = sessionMessages.findIndex(msg => 
+                  msg.sender === 'bot' && (msg.isProcessing || msg.isStreaming)
+                );
 
-                if (data.is_streaming) {
-                  if (lastMessage && lastMessage.sender === 'bot' && lastMessage.isStreaming) {
-                    filteredMessages[filteredMessages.length - 1] = {
-                      ...lastMessage,
-                      text: data.response
-                    };
-                  } else {
-                    filteredMessages.push({
-                      text: data.response,
-                      sender: 'bot',
-                      isStreaming: true
-                    });
+                if (messageIndex !== -1) {
+                  // 처리 중이거나 스트리밍 중인 메시지를 찾아서 업데이트
+                  sessionMessages[messageIndex] = {
+                    text: data.response,
+                    sender: 'bot',
+                    isStreaming: data.is_streaming
+                  };
+
+                  if (!data.is_streaming) {
+                    setIsBotResponding(false);
                   }
+                } else if (data.is_streaming) {
+                  // 처리 중인 메시지를 찾지 못했다면 새로 추가
+                  sessionMessages.push({
+                    text: data.response,
+                    sender: 'bot',
+                    isStreaming: true
+                  });
                 } else {
-                  if (lastMessage && lastMessage.sender === 'bot' && lastMessage.isStreaming) {
-                    filteredMessages[filteredMessages.length - 1] = {
-                      text: data.response,
-                      sender: 'bot',
-                      isStreaming: false
-                    };
-                    setIsBotResponding(false);  // 스트리밍이 끝나면 봇 응답 종료
-                  }
+                  // 스트리밍이 아닌 일반 메시지
+                  sessionMessages.push({
+                    text: data.response,
+                    sender: 'bot'
+                  });
+                  setIsBotResponding(false);
                 }
 
                 return {
                   ...prev,
-                  [activeSessionId]: filteredMessages
+                  [activeSessionId]: sessionMessages
                 };
               });
             }
           } catch (error) {
             console.error('메시지 처리 중 오류:', error);
             setError('메시지 처리 중 오류가 발생했습니다.');
-            setIsBotResponding(false);  // 에러 시 봇 응답 종료
+            setIsBotResponding(false);
           }
         };
 
@@ -416,39 +425,59 @@ export default function ChatbotUI() {
     setIsEditing(true);
 
     try {
-      // 웹소켓으로 메시지 수정 요청 전송
-      wsRef.current.send(JSON.stringify({
-        type: 'message_modify',
-        message_id: messageId,
-        new_message: editInput
-      }));
+      // 현재 세션의 모든 메시지 가져오기
+      const sessionMessages = [...messages[activeSessionId]];
+      const messageIndex = sessionMessages.findIndex(
+        msg => msg.sender === "user" && msg.messageId === messageId
+      );
 
-      // 임시로 UI 업데이트
-      setMessages(prev => {
-        const sessionMessages = [...prev[activeSessionId]];
-        const messageIndex = sessionMessages.findIndex(
-          msg => msg.sender === "user" && msg.messageId === messageId
-        );
-        
-        if (messageIndex !== -1) {
-          sessionMessages[messageIndex] = { 
-            text: editInput, 
-            sender: "user", 
-            messageId: messageId 
+      if (messageIndex !== -1) {
+        // 수정하려는 메시지 이후의 모든 메시지 ID 수집
+        const messagesToDelete = sessionMessages
+          .slice(messageIndex + 2) // 현재 메시지와 봇 응답 다음부터
+          .filter(msg => msg.sender === "user" && msg.messageId) // 사용자 메시지만 필터링
+          .map(msg => msg.messageId);
+
+        // 수집된 메시지들 삭제 요청
+        await Promise.all(messagesToDelete.map(msgId => 
+          fetch(`${BASE_URL}/chat/${activeSessionId}/message/${msgId}/`, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+        ));
+
+        // 웹소켓으로 메시지 수정 요청 전송
+        wsRef.current.send(JSON.stringify({
+          type: 'message_modify',
+          message_id: messageId,
+          new_message: editInput
+        }));
+
+        // UI 업데이트
+        setMessages(prev => {
+          const updatedMessages = sessionMessages.slice(0, messageIndex);
+          
+          updatedMessages.push(
+            { 
+              text: editInput, 
+              sender: "user", 
+              messageId: messageId 
+            },
+            { 
+              text: "메시지를 수정하고 있어요. 잠시만 기다려주세요! 🎮", 
+              sender: "bot",
+              isProcessing: true 
+            }
+          );
+
+          return {
+            ...prev,
+            [activeSessionId]: updatedMessages
           };
-          // 챗봇 응답은 웹소켓으로 받을 때까지 "수정 중..." 표시
-          sessionMessages[messageIndex + 1] = { 
-            text: "메시지를 수정하고 있어요. 잠시만 기다려주세요! 🎮", 
-            sender: "bot",
-            isProcessing: true 
-          };
-        }
-        
-        return {
-          ...prev,
-          [activeSessionId]: sessionMessages
-        };
-      });
+        });
+      }
 
       setEditingMessageId(null);
       setEditInput("");
