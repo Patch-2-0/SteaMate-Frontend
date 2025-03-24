@@ -10,6 +10,9 @@ const WS_URL = process.env.REACT_APP_WS_URL;
 
 // ✅ 챗봇 응답 포맷팅 함수 수정
 const formatChatbotResponse = (text) => {
+  // text가 undefined인 경우 빈 배열 반환
+  if (!text) return [];
+
   // 초기 인사말인 경우 바로 반환
   if (text.startsWith("안녕하세요!")) {
     return [
@@ -17,27 +20,52 @@ const formatChatbotResponse = (text) => {
         {text.split('\n').map((line, i) => (
           <span key={i}>
             {line}
-            {i === 0 && <br />} {/* 첫 줄 다음에만 줄바꿈 추가 */}
+            {i === 0 && <br />}
           </span>
         ))}
       </p>
     ];
   }
 
-  const lines = text.split("\n").filter((line) => line.trim() !== "");
+  const lines = text.split("\n").filter((line) => line && line.trim() !== "");
   const result = [];
   let currentGame = null;
   let currentDescription = [];
-  let finalMessage = null;  // 마지막 멘트를 저장할 변수
+  let currentGameLink = null;
+  let currentImageLink = null;
+  let finalMessage = null;
 
   lines.forEach((line, idx) => {
-    // 게임 제목 처리 (대괄호 안의 텍스트)
+    // 빈 라인 무시
+    if (!line || !line.trim()) return;
+
+    // 게임 제목 처리
     if (line.match(/^\[.*\]$/)) {
       // 이전 게임 정보가 있으면 먼저 추가
       if (currentGame && currentDescription.length > 0) {
         result.push(
-          <div key={`game-${result.length}`} className="mb-4">
-            <h3 className="text-xl font-bold text-blue-950">{currentGame}</h3>
+          <div key={`game-${result.length}`} className="mb-6">
+            <h3 className="text-xl font-bold text-blue-950 mb-2">
+              <a href={currentGameLink} target="_blank" rel="noopener noreferrer" 
+                 className="hover:text-blue-700 transition-colors">
+                {currentGame}
+              </a>
+            </h3>
+            {currentImageLink && currentGameLink && (
+              <a 
+                href={currentGameLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block hover:opacity-90 transition-opacity"
+              >
+                <img 
+                  src={currentImageLink} 
+                  alt={currentGame} 
+                  className="w-full rounded-lg mb-2 shadow-md cursor-pointer"
+                  loading="lazy"
+                />
+              </a>
+            )}
             <p className="text-gray-800 mt-1">{currentDescription.join(" ")}</p>
           </div>
         );
@@ -46,10 +74,23 @@ const formatChatbotResponse = (text) => {
       // 새 게임 시작
       currentGame = line.replace("[", "").replace("]", "");
       currentDescription = [];
+      currentGameLink = null;
+      currentImageLink = null;
     } 
-    // 게임 설명 처리 (- 로 시작하는 라인)
-    else if (line.trim().startsWith("-")) {
-      currentDescription.push(line.trim().substring(1).trim());
+    // 바로가기 링크 처리
+    else if (line.includes("바로가기 링크 :")) {
+      currentGameLink = line.split(": ")[1]?.trim() || null;
+    }
+    // 이미지 링크 처리
+    else if (line.includes("이미지 링크 :")) {
+      currentImageLink = line.split(": ")[1]?.trim() || null;
+    }
+    // 추천 이유 및 설명 처리
+    else if (line.includes("추천 이유 및 설명:")) {
+      const description = line.split("추천 이유 및 설명:")[1]?.trim();
+      if (description) {
+        currentDescription.push(description);
+      }
     }
     // "추천 게임" 텍스트 처리
     else if (line.startsWith("추천 게임")) {
@@ -60,7 +101,7 @@ const formatChatbotResponse = (text) => {
       );
     }
     // 일반 텍스트는 마지막 멘트로 저장
-    else {
+    else if (!line.includes("이미지 링크 :") && !line.includes("바로가기 링크 :")) {
       finalMessage = line;
     }
   });
@@ -68,8 +109,28 @@ const formatChatbotResponse = (text) => {
   // 마지막 게임 정보 추가
   if (currentGame && currentDescription.length > 0) {
     result.push(
-      <div key={`game-${result.length}`} className="mb-4">
-        <h3 className="text-xl font-bold text-blue-950">{currentGame}</h3>
+      <div key={`game-${result.length}`} className="mb-6">
+        <h3 className="text-xl font-bold text-blue-950 mb-2">
+          <a href={currentGameLink} target="_blank" rel="noopener noreferrer" 
+             className="hover:text-blue-700 transition-colors">
+            {currentGame}
+          </a>
+        </h3>
+        {currentImageLink && currentGameLink && (
+          <a 
+            href={currentGameLink} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block hover:opacity-90 transition-opacity"
+          >
+            <img 
+              src={currentImageLink} 
+              alt={currentGame} 
+              className="w-full rounded-lg mb-2 shadow-md cursor-pointer"
+              loading="lazy"
+            />
+          </a>
+        )}
         <p className="text-gray-800 mt-1">{currentDescription.join(" ")}</p>
       </div>
     );
