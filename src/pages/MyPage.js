@@ -110,15 +110,74 @@ export default function MyPage() {
       }
     }
   }, [token, userId, login, logout]);
+  const startPolling = () => {
+    const poll = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/account/${userId}/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+  
+        if (res.ok) {
+          const updatedUser = await res.json();
+          setUserData(updatedUser);
+  
+          if (updatedUser.is_syncing) {
+            setTimeout(poll, 3000);  // 다시 시도
+          } else {
+            setIsSyncing(false);     // 끝났으면 해제
+          }
+        }
+      } catch (err) {
+        console.error("동기화 상태 체크 실패:", err);
+      }
+    };
+  
+    poll(); // 첫 실행
+  };
 
   useEffect(() => {
     fetchUserData();
   }, [fetchUserData]);
   useEffect(() => {
+    if (!userData?.is_syncing) return;
+  
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/account/${userId}/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+  
+        if (res.ok) {
+          const updatedUser = await res.json();
+          setUserData(updatedUser);
+  
+          if (!updatedUser.is_syncing) {
+            clearInterval(interval); // 동기화 완료되면 중지
+          }
+        }
+      } catch (err) {
+        console.error("동기화 상태 체크 실패:", err);
+      }
+    }, 3000);
+  
+    return () => clearInterval(interval); // 컴포넌트 unmount 시 중지
+  }, [userData?.is_syncing]);
+  useEffect(() => {
     if (userData?.preferred_game) {
       setSelectedGames(userData.preferred_game);
     }
   }, [userData]);
+  useEffect(() => {
+    if (userData?.is_syncing !== undefined) {
+      setIsSyncing(userData.is_syncing);
+    }
+  }, [userData?.is_syncing]);
 
   const handleEdit = async (e) => {
     e.preventDefault();
@@ -255,65 +314,28 @@ export default function MyPage() {
   const syncSteamLibrary = useCallback(async () => {
     setIsSyncing(true);
     setSyncError(null);
-    
+  
     try {
       const response = await fetch(`${BASE_URL}/account/steamlibrary/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-        }
+        },
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || '라이브러리 동기화에 실패했습니다.');
       }
-
-      // 데이터가 업데이트될 때까지 주기적으로 확인
-      const checkData = async () => {
-        await fetchUserData();
-        // preferred_game 데이터가 있는지 확인
-        if (userData?.preferred_game?.length > 0) {
-          const isAutoSync = new URLSearchParams(window.location.search).get('steam_id');
-          if (!isAutoSync) {
-            alert('스팀 라이브러리가 성공적으로 동기화되었습니다!');
-          }
-          return true;
-        }
-        return false;
-      };
-
-      // 최대 10번, 3초 간격으로 확인
-      for (let i = 0; i < 10; i++) {
-        const isComplete = await checkData();
-        if (isComplete) break;
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      }
-
+  
+      // ✅ 바로 폴링 시작
+      startPolling();
     } catch (error) {
       setSyncError(error.message);
-    } finally {
       setIsSyncing(false);
     }
-  }, [token, fetchUserData, userData]);
-
-  // 자동 동기화를 위한 useEffect 추가
-  useEffect(() => {
-    if (userData?.steam_profile) {
-      // 마지막 동기화 시간을 localStorage에서 가져옴
-      const lastSyncTime = localStorage.getItem('lastSteamLibrarySync');
-      const now = new Date().getTime();
-      
-      // 마지막 동기화로부터 24시간이 지났거나, 동기화 기록이 없는 경우
-      if (!lastSyncTime || (now - parseInt(lastSyncTime)) > 24 * 60 * 60 * 1000) {
-        syncSteamLibrary().then(() => {
-          // 동기화 성공 시 시간 저장
-          localStorage.setItem('lastSteamLibrarySync', now.toString());
-        });
-      }
-    }
-  }, [userData?.steam_profile]); // steam_profile이 변경될 때마다 실행
+  }, [token, userId]);
 
   // Steam 계정 연동 함수 수정
   const handleSteamLink = async () => {
@@ -473,6 +495,11 @@ export default function MyPage() {
               >
                 {isSyncing ? "동기화 중..." : "스팀 라이브러리 동기화"}
               </Button>
+              {isSyncing && (
+                <p className="mt-2 text-blue-800 text-sm font-semibold">
+                  Steam 라이브러리를 불러오는 중입니다. 최대 30초 정도 걸릴 수 있어요.
+                </p>
+              )}
 
               {syncError && (
                 <div className="mt-2">
@@ -545,31 +572,30 @@ export default function MyPage() {
           )}
   
           {/* 선호 게임 */}
-          {userData.preferred_game && userData.preferred_game.length > 0 ? (
-            <div>
+            <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">선호 게임</h2>
+
               <Button
                 className="mt-2 px-3 py-1 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
                 onClick={() => setIsSelectingPreferredGame(!isSelectingPreferredGame)}
               >
                 {isSelectingPreferredGame ? "선호 게임 선택 취소" : "선호 게임 수정"}
               </Button>
-              <div className="flex flex-wrap gap-3">
-                {userData.preferred_game.map((game, index) => (
-                  <span key={index} className="bg-green-100 text-green-800 px-3 py-1.5 rounded-md">
-                    {game}
-                  </span>
-                ))}
-              </div>
+
+              {userData.preferred_game && userData.preferred_game.length > 0 ? (
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {userData.preferred_game.map((game, index) => (
+                    <span key={index} className="bg-green-100 text-green-800 px-3 py-1.5 rounded-md">
+                      {game}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-red-700 font-medium bg-red-100 border border-red-300 px-4 py-2 rounded-md mt-2">
+                  🚨 선호 게임이 없습니다. 보유 게임에서 선택해 저장해보세요!
+                </p>
+              )}
             </div>
-          ) : (
-            <div>
-              <h2 className="text-lg font-semibold mb-2">선호 게임</h2>
-              <p className="text-sm text-red-700 font-medium bg-red-100 border border-red-300 px-4 py-2 rounded-md">
-                🚨 선호 게임이 없습니다. 보유 게임에서 선택해 저장해보세요!
-              </p>
-            </div>
-          )}
 
           {/* 보유 게임 선택 UI */}
           {userData.library_games && (
