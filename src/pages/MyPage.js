@@ -9,8 +9,37 @@ const BASE_URL = process.env.REACT_APP_API_URL;
 
 export default function MyPage() {
   const { token, userId, logout, login } = useContext(AuthContext);
+  const [selectedGames, setSelectedGames] = useState([]);
+  const toggleGameSelection = (title) => {
+    setSelectedGames(prev =>
+      prev.includes(title)
+        ? prev.filter(g => g !== title)
+        : [...prev, title]
+    );
+  };
+  const handleSavePreferredGames = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/account/${userId}/`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ preferred_game: selectedGames }),
+      });
+  
+      if (!response.ok) throw new Error("선호 게임 저장 실패");
+  
+      alert("선호 게임이 저장되었습니다.");
+      fetchUserData();
+      setIsSelectingPreferredGame(false); // ✅ 수정 모드 종료
+    } catch (error) {
+      alert("저장 중 오류 발생: " + error.message);
+    }
+  };
   const [userData, setUserData] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSelectingPreferredGame, setIsSelectingPreferredGame] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -85,6 +114,11 @@ export default function MyPage() {
   useEffect(() => {
     fetchUserData();
   }, [fetchUserData]);
+  useEffect(() => {
+    if (userData?.preferred_game) {
+      setSelectedGames(userData.preferred_game);
+    }
+  }, [userData]);
 
   const handleEdit = async (e) => {
     e.preventDefault();
@@ -429,7 +463,7 @@ export default function MyPage() {
                 </div>
               </div>
           {/* Steam 라이브러리 동기화 버튼 */}
-          {userData.steam_profile && (!userData.preferred_game || userData.preferred_game.length === 0) && (
+          {userData.steam_profile && (
             <div className="mt-4">
               <Button 
                 onClick={syncSteamLibrary}
@@ -439,6 +473,7 @@ export default function MyPage() {
               >
                 {isSyncing ? "동기화 중..." : "스팀 라이브러리 동기화"}
               </Button>
+
               {syncError && (
                 <div className="mt-2">
                   <p className="text-red-500 text-sm">
@@ -496,7 +531,7 @@ export default function MyPage() {
         <div className="w-full md:w-2/3 bg-gray-100 p-6 rounded-lg shadow-md flex flex-col h-full overflow-y-auto custom-scrollbar">
           
           {/* 선호 장르 */}
-          {userData.preferred_genre && userData.preferred_genre.length > 0 && (
+          {userData.preferred_genre && (
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">선호 장르</h2>
               <div className="flex flex-wrap gap-3">
@@ -510,9 +545,15 @@ export default function MyPage() {
           )}
   
           {/* 선호 게임 */}
-          {userData.preferred_game && userData.preferred_game.length > 0 && (
+          {userData.preferred_game && userData.preferred_game.length > 0 ? (
             <div>
               <h2 className="text-lg font-semibold mb-2">선호 게임</h2>
+              <Button
+                className="mt-2 px-3 py-1 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                onClick={() => setIsSelectingPreferredGame(!isSelectingPreferredGame)}
+              >
+                {isSelectingPreferredGame ? "선호 게임 선택 취소" : "선호 게임 수정"}
+              </Button>
               <div className="flex flex-wrap gap-3">
                 {userData.preferred_game.map((game, index) => (
                   <span key={index} className="bg-green-100 text-green-800 px-3 py-1.5 rounded-md">
@@ -521,8 +562,54 @@ export default function MyPage() {
                 ))}
               </div>
             </div>
+          ) : (
+            <div>
+              <h2 className="text-lg font-semibold mb-2">선호 게임</h2>
+              <p className="text-sm text-red-700 font-medium bg-red-100 border border-red-300 px-4 py-2 rounded-md">
+                🚨 선호 게임이 없습니다. 보유 게임에서 선택해 저장해보세요!
+              </p>
+            </div>
           )}
-        </div>
+
+          {/* 보유 게임 선택 UI */}
+          {userData.library_games && (
+            <div className="mt-6">
+              <h2 className="text-lg font-semibold mb-2">보유 게임</h2>
+              {isSelectingPreferredGame && (
+                <Button
+                  onClick={handleSavePreferredGames}
+                  className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-md hover:bg-blue-900"
+                >
+                  선택한 게임을 선호 게임으로 저장
+                </Button>
+              )}
+              <div className="flex flex-wrap gap-3">
+                {[...userData.library_games]
+                  .sort((a, b) => b.playtime - a.playtime)
+                  .map((game, index) => {
+                    const isSelected = selectedGames.includes(game.title);
+                    return (
+                      <button
+                        key={index}
+                        onClick={
+                          isSelectingPreferredGame
+                            ? () => toggleGameSelection(game.title)
+                            : undefined // 선택 중이 아닐 땐 클릭 무시
+                        }
+                        className={`px-3 py-1.5 rounded-md border transition ${
+                          isSelected
+                            ? "bg-purple-600 text-white border-purple-700"
+                            : "bg-purple-100 text-purple-800 border-purple-300"
+                        } ${isSelectingPreferredGame ? "cursor-pointer" : "cursor-default opacity-60"}`}
+                      >
+                        {game.title} ({game.playtime}분)
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+          </div>
   
       </div>
     </main>
