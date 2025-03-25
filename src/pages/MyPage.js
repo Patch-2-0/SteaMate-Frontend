@@ -558,7 +558,7 @@ export default function MyPage() {
         {/* 우측: 선호 장르 & 선호 게임 (가변 높이 + 스크롤) */}
         <div className="w-full md:w-2/3 bg-gray-100 p-6 rounded-lg shadow-md flex flex-col h-full overflow-y-auto custom-scrollbar">
           
-          {/* 선호 장르 */}
+          {/* 선호 장르
           {userData.preferred_genre && (
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">선호 장르</h2>
@@ -570,7 +570,7 @@ export default function MyPage() {
                 ))}
               </div>
             </div>
-          )}
+          )} */}
   
           {/* 선호 게임 */}
             <div className="mb-6">
