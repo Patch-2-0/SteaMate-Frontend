@@ -8,23 +8,61 @@ import { Send, Plus } from "lucide-react";
 const BASE_URL = process.env.REACT_APP_API_URL;
 const WS_URL = process.env.REACT_APP_WS_URL;
 
+// 초기 인사말 포맷팅 함수 수정
+const formatInitialGreeting = () => {
+  return (
+    <div className="space-y-4">
+      <p className="text-lg font-medium mb-4">
+        안녕하세요! Steam 게임 추천 챗봇입니다. 
+        <br />
+        MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!
+      </p>
+      
+      <p className="font-medium text-blue-950 mb-2">다음과 같이 물어보세요! 👇</p>
+      
+      <div className="grid grid-cols-1 gap-3">
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🎮</span>
+            <div>
+              <p className="font-medium text-blue-950">이전에 했던 게임과 관련해서 질문하기</p>
+              <p className="text-gray-600 text-sm mt-1">예시) 나 구스구스덕 좋아해 비슷한 게임 추천해줘!</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">📚</span>
+            <div>
+              <p className="font-medium text-blue-950">스팀 라이브러리 기반 추천</p>
+              <p className="text-gray-600 text-sm mt-1">예시) 내가 좋아할만한 게임 추천해줘!</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🤔</span>
+            <div>
+              <p className="font-medium text-blue-950">복잡한 질문도 가능해요</p>
+              <p className="text-gray-600 text-sm mt-1">예시) 중세시대에 대검을 들고 몬스터들과 싸우는 게임 하고 싶어</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ✅ 챗봇 응답 포맷팅 함수 수정
 const formatChatbotResponse = (text) => {
   // text가 undefined인 경우 빈 배열 반환
   if (!text) return [];
 
-  // 초기 인사말인 경우 바로 반환
+  // 초기 인사말인 경우 새로운 포맷팅 적용
   if (text.startsWith("안녕하세요!")) {
-    return [
-      <p key="greeting" className="text-gray-800">
-        {text.split('\n').map((line, i) => (
-          <span key={i}>
-            {line}
-            {i < text.split('\n').length - 1 && <br />}
-          </span>
-        ))}
-      </p>
-    ];
+    return formatInitialGreeting();
   }
 
   const lines = text.split("\n").filter((line) => line && line.trim() !== "");
