@@ -178,6 +178,7 @@ export default function MyPage() {
       setIsSyncing(userData.is_syncing);
     }
   }, [userData?.is_syncing]);
+  
 
   const handleEdit = async (e) => {
     e.preventDefault();
@@ -473,7 +474,7 @@ export default function MyPage() {
                 />
                 <div className="flex flex-col">
                   <p className="text-gray-800 font-bold">
-                    {userData.steam_profile.personaname}
+                    {userData.steam_profile.personname}
                   </p>
                   <button
                     onClick={() => window.open(userData.steam_profile.profileurl, "_blank", "noopener")}
