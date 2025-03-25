@@ -42,8 +42,8 @@ const Home = () => {
           />
           <h2 className="text-2xl font-semibold text-neonPurple font-pixel">PickMate</h2>
           <p className="text-gray-300 mt-2 text-center">
-            서비스 준비중입니다.<br />
-            Coming Soon! 🎮
+            머신러닝 기반의<br />
+            사용자 맞춤형 게임 추천 서비스
           </p>
         </div>
       </div>
