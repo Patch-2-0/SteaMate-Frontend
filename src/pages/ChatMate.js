@@ -8,89 +8,159 @@ import { Send, Plus } from "lucide-react";
 const BASE_URL = process.env.REACT_APP_API_URL;
 const WS_URL = process.env.REACT_APP_WS_URL;
 
+// 초기 인사말 포맷팅 함수 수정
+const formatInitialGreeting = () => {
+  return (
+    <div className="space-y-4">
+      <p className="text-lg font-medium mb-4">
+        안녕하세요! Steam 게임 추천 챗봇입니다. 
+        <br />
+        MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!
+      </p>
+      
+      <p className="font-medium text-blue-950 mb-2">다음과 같이 물어보세요! 👇</p>
+      
+      <div className="grid grid-cols-1 gap-3">
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🎮</span>
+            <div>
+              <p className="font-medium text-blue-950">이전에 했던 게임과 관련해서 질문하기</p>
+              <p className="text-gray-600 text-sm mt-1">예시) 나 구스구스덕 좋아해 비슷한 게임 추천해줘!</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">📚</span>
+            <div>
+              <p className="font-medium text-blue-950">스팀 라이브러리 기반 추천</p>
+              <p className="text-gray-600 text-sm mt-1">예시) 내가 좋아할만한 게임 추천해줘!</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🤔</span>
+            <div>
+              <p className="font-medium text-blue-950">복잡한 질문도 가능해요</p>
+              <p className="text-gray-600 text-sm mt-1">예시) 중세시대에 대검을 들고 몬스터들과 싸우는 게임 하고 싶어</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ✅ 챗봇 응답 포맷팅 함수 수정
 const formatChatbotResponse = (text) => {
   // text가 undefined인 경우 빈 배열 반환
   if (!text) return [];
 
-  // 초기 인사말인 경우 바로 반환
+  // 초기 인사말인 경우 새로운 포맷팅 적용
   if (text.startsWith("안녕하세요!")) {
-    return [
-      <p key="greeting" className="text-gray-800">
-        {text.split('\n').map((line, i) => (
-          <span key={i}>
-            {line}
-            {i === 0 && <br />}
-          </span>
-        ))}
-      </p>
-    ];
+    return formatInitialGreeting();
   }
 
   const lines = text.split("\n").filter((line) => line && line.trim() !== "");
   const result = [];
+  let gameCards = [];
   let currentGame = null;
   let currentDescription = [];
   let currentGameLink = null;
   let currentImageLink = null;
+  let currentAppId = null;
   let finalMessage = null;
 
   lines.forEach((line, idx) => {
     // 빈 라인 무시
     if (!line || !line.trim()) return;
 
-    // 게임 제목 처리
-    if (line.match(/^\[.*\]$/)) {
+    // 게임 제목 처리 - [게임이름] :: appid 형식 파싱
+    if (line.match(/^\[.*\](\s*)::\s*\d+$/)) {
       // 이전 게임 정보가 있으면 먼저 추가
       if (currentGame && currentDescription.length > 0) {
-        result.push(
-          <div key={`game-${result.length}`} className="mb-6">
-            <h3 className="text-xl font-bold text-blue-950 mb-2">
-              <a href={currentGameLink} target="_blank" rel="noopener noreferrer" 
-                 className="hover:text-blue-700 transition-colors">
-                {currentGame}
-              </a>
-            </h3>
-            {currentImageLink && currentGameLink && (
-              <a 
-                href={currentGameLink} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block hover:opacity-90 transition-opacity"
-              >
-                <img 
-                  src={currentImageLink} 
-                  alt={currentGame} 
-                  className="w-full rounded-lg mb-2 shadow-md cursor-pointer"
-                  loading="lazy"
-                />
-              </a>
-            )}
-            <p className="text-gray-800 mt-1">{currentDescription.join(" ")}</p>
+        // appid가 있으면 Steam 링크 생성
+        if (currentAppId) {
+          currentGameLink = `https://store.steampowered.com/app/${currentAppId}`;
+          currentImageLink = `https://cdn.akamai.steamstatic.com/steam/apps/${currentAppId}/header.jpg`;
+        }
+        
+        gameCards.push(
+          <div key={`game-${gameCards.length}`} className="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.67rem)]">
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col cursor-default">
+              {currentImageLink && currentGameLink && (
+                <a 
+                  href={currentGameLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block hover:opacity-90 transition-opacity aspect-[460/215] overflow-hidden bg-gray-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <img 
+                    src={currentImageLink} 
+                    alt={currentGame} 
+                    className="w-full h-full object-contain cursor-pointer"
+                    loading="lazy"
+                  />
+                </a>
+              )}
+              <div className="p-4 flex-1 flex flex-col">
+                <h3 className="text-lg font-bold text-blue-950 mb-2">
+                  <a 
+                    href={currentGameLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="hover:text-blue-700 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {currentGame}
+                  </a>
+                </h3>
+                <p className="text-gray-700 text-sm mt-1">{currentDescription.join(" ")}</p>
+              </div>
+            </div>
           </div>
         );
       }
       
-      // 새 게임 시작
-      currentGame = line.replace("[", "").replace("]", "");
+      // 새 게임 시작 - 게임명과 appid 분리
+      const parts = line.split(/\s*::\s*/);
+      currentGame = parts[0].replace(/[\[\]]/g, "").trim();
+      currentAppId = parts.length > 1 ? parts[1].trim() : null;
       currentDescription = [];
       currentGameLink = null;
       currentImageLink = null;
+      
+      // appid가 있으면 Steam 링크 생성
+      if (currentAppId) {
+        currentGameLink = `https://store.steampowered.com/app/${currentAppId}`;
+        currentImageLink = `https://cdn.akamai.steamstatic.com/steam/apps/${currentAppId}/header.jpg`;
+      }
     } 
-    // 바로가기 링크 처리
+    // 바로가기 링크 처리 (appid가 없을 경우를 위한 백업)
     else if (line.includes("바로가기 링크 :")) {
-      currentGameLink = line.split(": ")[1]?.trim() || null;
+      currentGameLink = line.split(": ")[1]?.trim() || currentGameLink;
     }
-    // 이미지 링크 처리
+    // 이미지 링크 처리 (appid가 없을 경우를 위한 백업)
     else if (line.includes("이미지 링크 :")) {
-      currentImageLink = line.split(": ")[1]?.trim() || null;
+      currentImageLink = line.split(": ")[1]?.trim() || currentImageLink;
     }
     // 추천 이유 및 설명 처리
-    else if (line.includes("추천 이유 및 설명:")) {
-      const description = line.split("추천 이유 및 설명:")[1]?.trim();
+    else if (line.includes("추천 이유 및 설명")) {
+      const description = line.includes(":") 
+        ? line.split(":")[1]?.trim()
+        : line.trim();
       if (description) {
         currentDescription.push(description);
       }
+    }
+    // 추천 이유 없이 하이픈(-)으로 시작하는 설명 처리
+    else if (line.trim().startsWith("-") && currentGame) {
+      currentDescription.push(line.trim().substring(1).trim());
     }
     // "추천 게임" 텍스트 처리
     else if (line.startsWith("추천 게임")) {
@@ -108,30 +178,55 @@ const formatChatbotResponse = (text) => {
 
   // 마지막 게임 정보 추가
   if (currentGame && currentDescription.length > 0) {
+    // appid가 있으면 Steam 링크 생성
+    if (currentAppId) {
+      currentGameLink = `https://store.steampowered.com/app/${currentAppId}`;
+      currentImageLink = `https://cdn.akamai.steamstatic.com/steam/apps/${currentAppId}/header.jpg`;
+    }
+    
+    gameCards.push(
+      <div key={`game-${gameCards.length}`} className="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.67rem)]">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col cursor-default">
+          {currentImageLink && currentGameLink && (
+            <a 
+              href={currentGameLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block hover:opacity-90 transition-opacity aspect-[460/215] overflow-hidden bg-gray-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img 
+                src={currentImageLink} 
+                alt={currentGame} 
+                className="w-full h-full object-contain cursor-pointer"
+                loading="lazy"
+              />
+            </a>
+          )}
+          <div className="p-4 flex-1 flex flex-col">
+            <h3 className="text-lg font-bold text-blue-950 mb-2">
+              <a 
+                href={currentGameLink} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hover:text-blue-700 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {currentGame}
+              </a>
+            </h3>
+            <p className="text-gray-700 text-sm mt-1">{currentDescription.join(" ")}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 게임 카드가 있으면 그리드로 추가
+  if (gameCards.length > 0) {
     result.push(
-      <div key={`game-${result.length}`} className="mb-6">
-        <h3 className="text-xl font-bold text-blue-950 mb-2">
-          <a href={currentGameLink} target="_blank" rel="noopener noreferrer" 
-             className="hover:text-blue-700 transition-colors">
-            {currentGame}
-          </a>
-        </h3>
-        {currentImageLink && currentGameLink && (
-          <a 
-            href={currentGameLink} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="block hover:opacity-90 transition-opacity"
-          >
-            <img 
-              src={currentImageLink} 
-              alt={currentGame} 
-              className="w-full rounded-lg mb-2 shadow-md cursor-pointer"
-              loading="lazy"
-            />
-          </a>
-        )}
-        <p className="text-gray-800 mt-1">{currentDescription.join(" ")}</p>
+      <div key="game-cards-container" className="flex flex-wrap gap-4 mb-6">
+        {gameCards}
       </div>
     );
   }
@@ -226,7 +321,7 @@ export default function ChatbotUI() {
       // 정렬된 메시지를 현재 형식에 맞게 변환
       const formattedMessages = [
         { 
-          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!", 
+          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! \n\n다음과 같이 물어보세요! \n- 이전에 했던 게임과 관련해서 질문하기 ex)나 구스구스덕 좋아해 비슷한 게임 추천해줘! \n - 스팀 라이브러리 기반 추천 ex)내가 좋아할만한 게임 추천해줘! \n - 복잡한 질문 가능 ex)중세시대에 대검을 들고 몬스터들과 싸우는 게임 하고 싶어", 
           sender: "bot" 
         },
         ...sortedMessages.map(msg => ([
@@ -270,7 +365,7 @@ export default function ChatbotUI() {
       setMessages(prev => ({
         ...prev,
         [newSessionId]: [{ 
-          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!", 
+          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! \n\n다음과 같이 물어보세요! \n- 이전에 했던 게임과 관련해서 질문하기 ex)나 구스구스덕 좋아해 비슷한 게임 추천해줘! \n - 스팀 라이브러리 기반 추천 ex)내가 좋아할만한 게임 추천해줘! \n - 복잡한 질문 가능 ex)중세시대에 대검을 들고 몬스터들과 싸우는 게임 하고 싶어", 
           sender: "bot" 
         }]
       }));
@@ -618,7 +713,7 @@ export default function ChatbotUI() {
   }, [messages, activeSessionId]);
 
   return (
-    <div className="flex h-[calc(100vh-64px)] w-full max-w-6xl mx-auto bg-white shadow-lg rounded-2xl overflow-hidden">
+    <div className="flex h-[calc(100vh-64px)] w-full max-w-[88rem] mx-auto bg-white shadow-lg rounded-2xl overflow-hidden">
       {/* 세션 목록 사이드바 */}
       <div className="w-64 border-r bg-gray-50 p-4 overflow-y-auto">
         <Button onClick={createNewSession} className="w-full mb-4 bg-blue-950 hover:bg-blue-900 text-white rounded-lg" size="icon">
@@ -681,7 +776,7 @@ export default function ChatbotUI() {
                   {msg.sender === "bot" && (
                     <img src="/robot-avatar.gif" alt="Bot" className="w-12 h-12 rounded-xl flex-shrink-0 mt-1" />
                   )}
-                  <div className={`relative group ${msg.sender === "user" ? "max-w-[80%]" : "max-w-[85%]"}`}>
+                  <div className={`relative group ${msg.sender === "user" ? "max-w-[80%]" : "max-w-[85%] w-full"}`}>
                     {editingMessageId === msg.messageId && msg.sender === "user" ? (
                       <div className="flex flex-col gap-2 w-[400px]">
                         <Input
@@ -728,7 +823,7 @@ export default function ChatbotUI() {
                       >
                         {msg.sender === "bot" ? (
                           <div className="flex items-start gap-2">
-                            <div>{formatChatbotResponse(msg.text)}</div>
+                            <div className="w-full">{formatChatbotResponse(msg.text)}</div>
                           </div>
                         ) : (
                           msg.text
