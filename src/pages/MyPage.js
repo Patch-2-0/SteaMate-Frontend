@@ -629,7 +629,7 @@ export default function MyPage() {
                             : "bg-purple-100 text-purple-800 border-purple-300"
                         } ${isSelectingPreferredGame ? "cursor-pointer" : "cursor-default opacity-60"}`}
                       >
-                        {game.title} ({game.playtime}분)
+                        {game.title} ({Math.floor(game.playtime / 60)}시간 {game.playtime % 60}분)
                       </button>
                     );
                   })}
