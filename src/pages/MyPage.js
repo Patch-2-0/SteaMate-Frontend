@@ -572,31 +572,33 @@ export default function MyPage() {
           )}
   
           {/* 선호 게임 */}
-          {userData.preferred_game && userData.preferred_game.length > 0 ? (
-            <div>
+          {/* 선호 게임 섹션 */}
+            <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">선호 게임</h2>
+
+              {/* 항상 보이게 하기 */}
               <Button
                 className="mt-2 px-3 py-1 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
                 onClick={() => setIsSelectingPreferredGame(!isSelectingPreferredGame)}
               >
                 {isSelectingPreferredGame ? "선호 게임 선택 취소" : "선호 게임 수정"}
               </Button>
-              <div className="flex flex-wrap gap-3">
-                {userData.preferred_game.map((game, index) => (
-                  <span key={index} className="bg-green-100 text-green-800 px-3 py-1.5 rounded-md">
-                    {game}
-                  </span>
-                ))}
-              </div>
+
+              {/* 선호 게임이 있을 때 목록 보여줌 */}
+              {userData.preferred_game && userData.preferred_game.length > 0 ? (
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {userData.preferred_game.map((game, index) => (
+                    <span key={index} className="bg-green-100 text-green-800 px-3 py-1.5 rounded-md">
+                      {game}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-red-700 font-medium bg-red-100 border border-red-300 px-4 py-2 rounded-md mt-2">
+                  🚨 선호 게임이 없습니다. 보유 게임에서 선택해 저장해보세요!
+                </p>
+              )}
             </div>
-          ) : (
-            <div>
-              <h2 className="text-lg font-semibold mb-2">선호 게임</h2>
-              <p className="text-sm text-red-700 font-medium bg-red-100 border border-red-300 px-4 py-2 rounded-md">
-                🚨 선호 게임이 없습니다. 보유 게임에서 선택해 저장해보세요!
-              </p>
-            </div>
-          )}
 
           {/* 보유 게임 선택 UI */}
           {userData.library_games && (
