@@ -220,7 +220,7 @@ const SteamSignup = () => {
       login(data.access, data.user_id);
   
       alert("🎉 Steam 회원가입이 완료되었습니다.");
-      navigate("/");
+      navigate("/MyPage");
   
     } catch (error) {
       if (error.response && error.response.data) {
