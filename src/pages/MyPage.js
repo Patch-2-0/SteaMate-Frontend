@@ -572,11 +572,9 @@ export default function MyPage() {
           )}
   
           {/* 선호 게임 */}
-          {/* 선호 게임 섹션 */}
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">선호 게임</h2>
 
-              {/* 항상 보이게 하기 */}
               <Button
                 className="mt-2 px-3 py-1 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
                 onClick={() => setIsSelectingPreferredGame(!isSelectingPreferredGame)}
@@ -584,7 +582,6 @@ export default function MyPage() {
                 {isSelectingPreferredGame ? "선호 게임 선택 취소" : "선호 게임 수정"}
               </Button>
 
-              {/* 선호 게임이 있을 때 목록 보여줌 */}
               {userData.preferred_game && userData.preferred_game.length > 0 ? (
                 <div className="flex flex-wrap gap-3 mt-2">
                   {userData.preferred_game.map((game, index) => (
