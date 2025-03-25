@@ -178,6 +178,7 @@ export default function MyPage() {
       setIsSyncing(userData.is_syncing);
     }
   }, [userData?.is_syncing]);
+  
 
   const handleEdit = async (e) => {
     e.preventDefault();
@@ -473,7 +474,7 @@ export default function MyPage() {
                 />
                 <div className="flex flex-col">
                   <p className="text-gray-800 font-bold">
-                    {userData.steam_profile.personaname}
+                    {userData.steam_profile.personname}
                   </p>
                   <button
                     onClick={() => window.open(userData.steam_profile.profileurl, "_blank", "noopener")}
@@ -576,7 +577,7 @@ export default function MyPage() {
               <h2 className="text-lg font-semibold mb-2">선호 게임</h2>
 
               <Button
-                className="mt-2 px-3 py-1 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                className="mt-2 mb -1 px-3 py-1 text-sm bg-purple-200 text-purple-900 rounded-md hover:bg-purple-700"
                 onClick={() => setIsSelectingPreferredGame(!isSelectingPreferredGame)}
               >
                 {isSelectingPreferredGame ? "선호 게임 선택 취소" : "선호 게임 수정"}
@@ -604,7 +605,7 @@ export default function MyPage() {
               {isSelectingPreferredGame && (
                 <Button
                   onClick={handleSavePreferredGames}
-                  className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-md hover:bg-blue-900"
+                  className="mt-4 mb-4 px-4 py-2 bg-blue-950 text-white rounded-md hover:bg-blue-700"
                 >
                   선택한 게임을 선호 게임으로 저장
                 </Button>
