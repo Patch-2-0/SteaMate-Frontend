@@ -20,7 +20,7 @@ const formatChatbotResponse = (text) => {
         {text.split('\n').map((line, i) => (
           <span key={i}>
             {line}
-            {i === 0 && <br />}
+            {i < text.split('\n').length - 1 && <br />}
           </span>
         ))}
       </p>
@@ -283,7 +283,7 @@ export default function ChatbotUI() {
       // 정렬된 메시지를 현재 형식에 맞게 변환
       const formattedMessages = [
         { 
-          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!", 
+          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! \n\n다음과 같이 물어보세요! \n- 이전에 했던 게임과 관련해서 질문하기 ex)나 구스구스덕 좋아해 비슷한 게임 추천해줘! \n - 스팀 라이브러리 기반 추천 ex)내가 좋아할만한 게임 추천해줘! \n - 복잡한 질문 가능 ex)중세시대에 대검을 들고 몬스터들과 싸우는 게임 하고 싶어", 
           sender: "bot" 
         },
         ...sortedMessages.map(msg => ([
@@ -327,7 +327,7 @@ export default function ChatbotUI() {
       setMessages(prev => ({
         ...prev,
         [newSessionId]: [{ 
-          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!", 
+          text: "안녕하세요! Steam 게임 추천 챗봇입니다.\nMyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요! \n\n다음과 같이 물어보세요! \n- 이전에 했던 게임과 관련해서 질문하기 ex)나 구스구스덕 좋아해 비슷한 게임 추천해줘! \n - 스팀 라이브러리 기반 추천 ex)내가 좋아할만한 게임 추천해줘! \n - 복잡한 질문 가능 ex)중세시대에 대검을 들고 몬스터들과 싸우는 게임 하고 싶어", 
           sender: "bot" 
         }]
       }));
