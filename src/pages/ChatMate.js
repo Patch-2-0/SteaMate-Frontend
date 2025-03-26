@@ -393,11 +393,9 @@ export default function ChatbotUI() {
       try {
         // 웹소켓 URL에 토큰을 포함
         const wsUrl = `${WS_URL}${activeSessionId}/?token=${token}`;
-        console.log('Connecting to WebSocket:', wsUrl);
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-          console.log('웹소켓 연결됨');
           setIsConnected(true);
           setError(null);
         };
@@ -457,14 +455,12 @@ export default function ChatbotUI() {
               });
             }
           } catch (error) {
-            console.error('메시지 처리 중 오류:', error);
             setError('메시지 처리 중 오류가 발생했습니다.');
             setIsBotResponding(false);
           }
         };
 
         ws.onclose = (event) => {
-          console.log('웹소켓 연결 종료', event.code, event.reason);
           setIsConnected(false);
           
           // 비정상 종료 코드에 따른 에러 메시지
@@ -476,7 +472,6 @@ export default function ChatbotUI() {
         };
 
         ws.onerror = (error) => {
-          console.error('웹소켓 에러:', error);
           setError('연결 중 오류가 발생했습니다.');
         };
 
@@ -496,7 +491,6 @@ export default function ChatbotUI() {
           }
         };
       } catch (error) {
-        console.error('웹소켓 설정 오류:', error);
         setError('웹소켓 연결을 설정할 수 없습니다.');
       }
     }
