@@ -313,6 +313,9 @@ export default function ChatbotUI() {
   // 세션 선택 시 이전 대화 내역 불러오기 함수 추가
   const fetchSessionMessages = async (sessionId) => {
     try {
+      // 세션 변경 시 isBotResponding 상태를 초기화
+      setIsBotResponding(false);
+      
       const response = await fetch(`${BASE_URL}/chat/${sessionId}/message/`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -356,6 +359,9 @@ export default function ChatbotUI() {
     }
   
     try {
+      // 새 세션 생성 시 isBotResponding 상태를 초기화
+      setIsBotResponding(false);
+      
       const response = await fetch(`${BASE_URL}/chat/`, {
         method: "POST",
         headers: {
