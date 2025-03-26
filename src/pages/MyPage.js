@@ -178,6 +178,7 @@ export default function MyPage() {
       setIsSyncing(userData.is_syncing);
     }
   }, [userData?.is_syncing]);
+  
 
   const handleEdit = async (e) => {
     e.preventDefault();
@@ -427,41 +428,53 @@ export default function MyPage() {
           {/* 기본 정보 */}
           <div className="mb-6">
             <h2 className="text-lg font-semibold mb-2">기본 정보</h2>
-            {isEditing ? (
-              <form onSubmit={handleEdit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">닉네임</label>
-                  <Input
-                    value={editForm.nickname}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, nickname: e.target.value })
-                    }
-                  />
-                </div>
-  
-                <div className="flex gap-2">
-                  <Button type="submit">저장</Button>
+            <div className="flex justify-between items-center">
+              {isEditing ? (
+                <form onSubmit={handleEdit} className="space-y-4 flex-grow">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">닉네임</label>
+                    <Input
+                      value={editForm.nickname}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, nickname: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="submit" className="bg-blue-950 hover:bg-blue-900">저장</Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsEditing(false)}
+                      className="bg-gray-300 hover:bg-gray-400"
+                    >
+                      취소
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <p className="text-gray-700 flex-grow">
+                    <span className="font-medium">닉네임:</span> <strong>{userData.nickname}</strong>
+                  </p>
                   <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsEditing(false)}
+                    className="ml-4 w-28 px-4 py-2 bg-blue-950 hover:bg-blue-900 flex-shrink-0"
+                    onClick={() => setIsEditing(true)}
                   >
-                    취소
+                    정보 수정
                   </Button>
-                </div>
-              </form>
-            ) : (
-              <p className="text-gray-700">
-                <span className="font-medium">닉네임:</span> {userData.nickname}
-              </p>
-            )}
+                </>
+              )}
+            </div>
           </div>
+
   
           {/* Steam 정보 */}
           {userData.steam_profile ? (
             <div className="mb-4">
               <h2 className="text-lg font-semibold mb-3">Steam 정보</h2>
               <div className="flex items-center gap-4 bg-white p-4 rounded-lg shadow-sm">
+                {/* 프로필 이미지 */}
                 <img
                   src={userData.steam_profile.avatar}
                   alt="Steam Avatar"
@@ -471,19 +484,27 @@ export default function MyPage() {
                     e.target.src = "/default-avatar.png";
                   }}
                 />
-                <div className="flex flex-col">
-                  <p className="text-gray-800 font-bold">
-                    {userData.steam_profile.personaname}
-                  </p>
-                  <button
-                    onClick={() => window.open(userData.steam_profile.profileurl, "_blank", "noopener")}
-                    className="bg-blue-700 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-800 transition duration-200 w-full sm:w-auto"
-                    aria-label="Steam 프로필 방문하기"
-                  >
-                    Steam 프로필 방문하기
-                  </button>
-                </div>
-              </div>
+
+          {/* 닉네임 & 보유 게임 수 */}
+            <div className="flex flex-col flex-grow">
+              <p className="text-xl text-gray-800 font-bold">
+                {userData.steam_profile.personname}
+              </p>
+              <p className="text-gray-600 text-sm">
+                보유 게임: <span className="font-semibold">{userData.library_games.length}개</span>
+              </p>
+            </div>
+
+          {/* Steam 프로필 방문하기 버튼 */}
+            <button
+            onClick={() => window.open(userData.steam_profile.profileurl, "_blank", "noopener")}
+            className="bg-blue-950 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-900 transition duration-200"
+            aria-label="Steam 프로필 방문하기"
+            >
+              Steam 프로필 <br/> 방문하기
+            </button>
+          </div>
+          
           {/* Steam 라이브러리 동기화 버튼 */}
           {userData.steam_profile && (
             <div className="mt-4">
@@ -501,22 +522,23 @@ export default function MyPage() {
                 </p>
               )}
 
-              {syncError && (
+              {(syncError || userData.library_games?.length === 0) && (
                 <div className="mt-2">
-                  <p className="text-red-500 text-sm">
-                    {syncError}
-                  </p>
-                  {syncError.includes('Steam 프로필이 비공개') && (
-                    <div className="mt-2 text-sm text-gray-600">
-                      <p>Steam 프로필을 공개로 설정하는 방법:</p>
-                      <ol className="list-decimal list-inside mt-1">
-                        <li>Steam 프로필 페이지로 이동</li>
-                        <li>프로필 수정 버튼 클릭</li>
-                        <li>프라이버시 설정에서 "게임 세부 정보"를 "공개"로 변경</li>
-                        <li>변경사항 저장</li>
-                      </ol>
-                    </div>
+                  {syncError && (
+                    <p className="text-red-500 text-sm">
+                      {syncError}
+                    </p>
                   )}
+                  <div className="mt-4 text-sm text-gray-600 bg-yellow-50 border border-yellow-300 p-4 rounded-md">
+                    <p>Steam 라이브러리가 비어있거나, Steam 프로필이 비공개일 경우 동기화가 안 될 수 있습니다.</p>
+                    <p className="mt-2 font-semibold">Steam 프로필을 공개로 설정하는 방법:</p>
+                    <ol className="list-decimal list-inside mt-1">
+                      <li>Steam 프로필 페이지로 이동</li>
+                      <li>프로필 수정 버튼 클릭</li>
+                      <li>프라이버시 설정에서 "게임 세부 정보"를 "공개"로 변경</li>
+                      <li>변경사항 저장</li>
+                    </ol>
+                  </div>
                 </div>
               )}
             </div>
@@ -541,16 +563,9 @@ export default function MyPage() {
           )}
 
   
-          {/* 버튼: 정보 수정 & 회원 탈퇴 */}
-          <div className="flex gap-2 mt-auto">
-            {!isEditing && (
-              <Button className="bg-blue-950 hover:bg-blue-900 w-full" onClick={() => setIsEditing(true)}>
-                정보 수정
-              </Button>
-            )}
-            <Button className="bg-red-600 hover:bg-red-700 w-full" variant="destructive" onClick={handleDelete}>
-              회원 탈퇴
-            </Button>
+          {/* 회원 탈퇴 */}
+          <div className="mt-auto text-gray-400 text-right">
+            <p> 회원 탈퇴를 원하시면 <span className="underline cursor-pointer hover:text-gray-500" onClick={handleDelete}>여기를 클릭</span>하세요.</p>
           </div>
         </div>
   
@@ -570,35 +585,36 @@ export default function MyPage() {
               </div>
             </div>
           )}
-  
-          {/* 선호 게임 */}
-          {/* 선호 게임 섹션 */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-2">선호 게임</h2>
 
-              {/* 항상 보이게 하기 */}
-              <Button
-                className="mt-2 px-3 py-1 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
-                onClick={() => setIsSelectingPreferredGame(!isSelectingPreferredGame)}
-              >
-                {isSelectingPreferredGame ? "선호 게임 선택 취소" : "선호 게임 수정"}
-              </Button>
+      {/* 선호 게임 */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <h2 className="text-lg font-semibold">선호 게임</h2>
 
-              {/* 선호 게임이 있을 때 목록 보여줌 */}
-              {userData.preferred_game && userData.preferred_game.length > 0 ? (
-                <div className="flex flex-wrap gap-3 mt-2">
-                  {userData.preferred_game.map((game, index) => (
-                    <span key={index} className="bg-green-100 text-green-800 px-3 py-1.5 rounded-md">
-                      {game}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-red-700 font-medium bg-red-100 border border-red-300 px-4 py-2 rounded-md mt-2">
-                  🚨 선호 게임이 없습니다. 보유 게임에서 선택해 저장해보세요!
-                </p>
-              )}
-            </div>
+          {userData.library_games?.length > 0 && (
+            <Button
+              className="px-2 py-1 text-sm bg-green-700 text-white rounded-md hover:bg-green-600 transition"
+              onClick={() => setIsSelectingPreferredGame(!isSelectingPreferredGame)}
+            >
+              {isSelectingPreferredGame ? "수정 취소" : "선호 게임 추가하기"}
+            </Button>
+          )}
+        </div>
+
+        {userData.preferred_game && userData.preferred_game.length > 0 ? (
+          <div className="flex flex-wrap gap-3 mt-2">
+            {userData.preferred_game.map((game, index) => (
+              <span key={index} className="bg-green-100 text-green-800 px-3 py-1.5 rounded-md">
+                {game}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-red-700 font-medium bg-red-100 border border-red-300 px-4 py-2 rounded-md mt-2">
+            🚨 선호 게임이 없습니다. 라이브러리를 동기화하고 보유 게임에서 선택해 저장해보세요!
+          </p>
+        )}
+      </div>
 
           {/* 보유 게임 선택 UI */}
           {userData.library_games && (
@@ -607,7 +623,7 @@ export default function MyPage() {
               {isSelectingPreferredGame && (
                 <Button
                   onClick={handleSavePreferredGames}
-                  className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-md hover:bg-blue-900"
+                  className="mt-4 mb-4 px-4 py-2 bg-blue-950 text-white rounded-md hover:bg-blue-900"
                 >
                   선택한 게임을 선호 게임으로 저장
                 </Button>
@@ -627,11 +643,11 @@ export default function MyPage() {
                         }
                         className={`px-3 py-1.5 rounded-md border transition ${
                           isSelected
-                            ? "bg-purple-600 text-white border-purple-700"
-                            : "bg-purple-100 text-purple-800 border-purple-300"
+                            ? "bg-gray-700 text-white border-gray-500"
+                            : "bg-gray-200 text-gray-500 border-gray-500"
                         } ${isSelectingPreferredGame ? "cursor-pointer" : "cursor-default opacity-60"}`}
                       >
-                        {game.title} ({game.playtime}분)
+                        {game.title} ({Math.floor(game.playtime / 60)}시간 {game.playtime % 60}분)
                       </button>
                     );
                   })}

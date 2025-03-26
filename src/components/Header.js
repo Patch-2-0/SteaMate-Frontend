@@ -44,11 +44,6 @@ const Header = () => {
     }
   };
 
-  const handlePickMateClick = (e) => {
-    e.preventDefault();
-    alert("PickMate 서비스는 현재 준비중입니다.");
-  };
-
   return (
     <nav className="fixed top-0 left-0 w-full h-14 bg-transparent text-white px-6 flex justify-between items-center z-50">
 
@@ -69,7 +64,7 @@ const Header = () => {
       {/* 중앙 메뉴 (화면이 클 때만 보이기) */}
       <div className="hidden md:flex space-x-6 font-semibold">
         <Link to="/chatmate" className="button-pixel">ChatMate</Link>
-        <Link to="#" onClick={handlePickMateClick} className="button-pixel">PickMate</Link>
+        <Link to="/pickmate" className="button-pixel">PickMate</Link>
       </div>
 
       <div className="flex space-x-4">
@@ -90,10 +85,7 @@ const Header = () => {
       {menuOpen && (
         <div className="absolute top-14 left-0 w-full bg-[#1b1b3a] text-white flex flex-col items-center py-4 space-y-4 md:hidden">
           <Link to="/chatmate" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>ChatMate</Link>
-          <Link to="#" className="button-pixel w-3/4 text-center" onClick={(e) => {
-            setMenuOpen(false);
-            handlePickMateClick(e);
-          }}>PickMate</Link>
+          <Link to="/pickmate" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>PickMate</Link>
           {isAuth ? (
             <>
               <Link to="/mypage" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>마이페이지</Link>
