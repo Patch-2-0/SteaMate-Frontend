@@ -88,7 +88,7 @@ const formatChatbotResponse = (text) => {
     if (!line || !line.trim()) return;
 
     // 게임 제목 처리 - [게임이름] :: appid 형식 파싱
-    if (line.match(/^\[.*\](\s*)::\s*\d+$/)) {
+    if (line.match(/^\[.*\](\s*)::\s*\d+$/) || line.match(/^\*\*\[.*\]\*\*(\s*)::\s*\d+$/)) {
       // 이전 게임 정보가 있으면 먼저 추가
       if (currentGame && currentDescription.length > 0) {
         // appid가 있으면 Steam 링크 생성
@@ -137,7 +137,8 @@ const formatChatbotResponse = (text) => {
       
       // 새 게임 시작 - 게임명과 appid 분리
       const parts = line.split(/\s*::\s*/);
-      currentGame = parts[0].replace(/[\[\]]/g, "").trim();
+      // 마크다운 강조(**) 와 대괄호([]) 제거
+      currentGame = parts[0].replace(/[\[\]\*]/g, "").trim();
       currentAppId = parts.length > 1 ? parts[1].trim() : null;
       currentDescription = [];
       currentGameLink = null;
