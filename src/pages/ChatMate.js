@@ -4,6 +4,7 @@ import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { motion } from "framer-motion";
 import { Send, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const BASE_URL = process.env.REACT_APP_API_URL;
 const WS_URL = process.env.REACT_APP_WS_URL;
@@ -17,6 +18,13 @@ const formatInitialGreeting = () => {
         <br />
         MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!
       </p>
+
+    {/* ✅ Steam 연동 버튼 추가 */}
+    <Link to="/mypage" className="ml-auto">
+      <button className="bg-blue-950 text-white py-2 px-6 rounded-lg hover:bg-blue-900 text-center leading-tight shadow-md">
+        스팀 계정 연동 혹은 라이브러리 연동하러 가기
+      </button>
+      </Link>
       
       <p className="font-medium text-blue-950 mb-2">다음과 같이 물어보세요! 👇</p>
       
@@ -55,9 +63,175 @@ const formatInitialGreeting = () => {
   );
 };
 
+// 게임 카드 컴포넌트
+const GameCard = ({ game, description, gameLink, imageLink }) => {
+  return (
+    <div className="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.67rem)]">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col cursor-default">
+        {imageLink && gameLink && (
+          <a 
+            href={gameLink} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block hover:opacity-90 transition-opacity aspect-[460/215] overflow-hidden bg-gray-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img 
+              src={imageLink} 
+              alt={game} 
+              className="w-full h-full object-contain cursor-pointer"
+              loading="lazy"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "/game-placeholder.png"; // 대체 이미지
+              }}
+            />
+          </a>
+        )}
+        <div className="p-4 flex-1 flex flex-col">
+          <h3 className="text-lg font-bold text-blue-950 mb-2">
+            <a 
+              href={gameLink} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-blue-700 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {game}
+            </a>
+          </h3>
+          <p 
+            className="text-gray-700 text-sm mt-1"
+            dangerouslySetInnerHTML={{ __html: description }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 게임 제목 정규식 패턴 모음
+const gameTitlePatterns = {
+  bracketsWithAppId: /^\[(.+?)\](\s*)::\s*(\d+)$/,
+  starsAndBracketsWithAppId: /^\*\*\[(.+?)\]\*\*(\s*)::\s*(\d+)$/,
+  starsWithAppId: /^\*\*(.+?)\*\*(\s*)::\s*(\d+)$/,
+  starsOnly: /^\*\*(.+?)\*\*$/,
+  plainWithAppId: /^(.+?)(\s*)::\s*(\d+)$/  // 강조나 괄호 없이 게임제목 :: appid 형식
+};
+
+// 설명 항목 패턴 (장르, 스토리 등)
+const descriptionItemPattern = /^\s*(\d*\.)?\s*\*\*([^:]+?)\*\*\s*:\s*(.+)$/;
+
+// 라인 파싱 함수
+const parseGameLine = (line) => {
+  // 빈 라인 체크
+  if (!line || !line.trim()) return null;
+  
+  // 설명 항목 패턴 체크 (예: 1. **장르**: RPG 또는 **장르**: RPG)
+  const descItemMatch = line.match(descriptionItemPattern);
+  if (descItemMatch) {
+    return {
+      type: 'descriptionItem',
+      label: descItemMatch[2].trim(),
+      content: descItemMatch[3].trim()
+    };
+  }
+  
+  // 게임 제목 형식 체크
+  for (const [type, pattern] of Object.entries(gameTitlePatterns)) {
+    const match = line.match(pattern);
+    if (match) {
+      if (type === 'starsOnly' && line.includes("::")) continue; // :: 포함된 경우 starsOnly가 아님
+      if (type === 'plainWithAppId' && (line.includes("[") || line.includes("**"))) continue; // 다른 패턴에 이미 매치될 가능성이 있는 경우 스킵
+      
+      // 게임 제목 추출
+      let gameTitle = match[1].trim();
+      let appId = null;
+      
+      // appId 추출 (있는 경우)
+      if (type !== 'starsOnly') {
+        appId = match[match.length - 1];
+      }
+      
+      return {
+        type: 'gameTitle',
+        gameTitle,
+        appId
+      };
+    }
+  }
+  
+  // 링크 및 기타 정보 체크
+  if (line.includes("바로가기 링크 :")) {
+    return {
+      type: 'gameLink',
+      value: line.split(": ")[1]?.trim() || ""
+    };
+  }
+  
+  if (line.includes("이미지 링크 :")) {
+    return {
+      type: 'imageLink',
+      value: line.split(": ")[1]?.trim() || ""
+    };
+  }
+  
+  if (line.includes("추천 이유 및 설명") || line.includes("추천 이유:") || line.includes("추천 이유 :")) {
+    return {
+      type: 'description',
+      value: line.includes(":") ? line.split(":")[1]?.trim() : line.trim()
+    };
+  }
+  
+  if (line.trim().startsWith("-")) {
+    return {
+      type: 'bulletPoint',
+      value: line.trim().substring(1).trim()
+    };
+  }
+  
+  if (line.startsWith("추천 게임")) {
+    return {
+      type: 'sectionTitle',
+      value: line
+    };
+  }
+  
+  // 기타 텍스트
+  return {
+    type: 'text',
+    value: line.trim()
+  };
+};
+
+// 설명 항목들을 포맷팅하는 함수
+const formatDescriptionItems = (items) => {
+  if (!items || items.length === 0) return "";
+  
+  return items.map(item => {
+    return `<span class="font-bold">${item.label}:</span> ${item.content}`;
+  }).join('<br />');
+};
+
+// 마크다운 스타일 포맷팅을 HTML로 변환
+const formatMarkdown = (text) => {
+  if (!text) return "";
+  
+  // 볼드 텍스트 변환 (**텍스트**)
+  text = text.replace(/\*\*([^*]+)\*\*/g, '<span class="font-bold">$1</span>');
+  
+  // 이탤릭 텍스트 변환 (*텍스트*)
+  text = text.replace(/\*([^*]+)\*/g, '<span class="italic">$1</span>');
+  
+  // 줄바꿈 처리
+  text = text.replace(/\n/g, '<br />');
+  
+  return text;
+};
+
 // ✅ 챗봇 응답 포맷팅 함수 수정
 const formatChatbotResponse = (text) => {
-  // text가 undefined인 경우 빈 배열 반환
+  // text가 없거나 undefined인 경우 빈 배열 반환
   if (!text) return [];
 
   // 초기 인사말인 경우 새로운 포맷팅 적용
@@ -65,180 +239,253 @@ const formatChatbotResponse = (text) => {
     return formatInitialGreeting();
   }
 
-  const lines = text.split("\n").filter((line) => line && line.trim() !== "");
-  const result = [];
-  let gameCards = [];
-  let currentGame = null;
-  let currentDescription = [];
-  let currentGameLink = null;
-  let currentImageLink = null;
-  let currentAppId = null;
-  let finalMessage = null;
+  try {
+    // 여러 게임 제목이 포함된 비교 설명 텍스트인지 확인
+    const gameComparisonPattern = /\*\*([^*]+?)\*\*와\s*\*\*([^*]+?)\*\*|\*\*([^*]+?)\*\*과\s*\*\*([^*]+?)\*\*/;
+    if (gameComparisonPattern.test(text)) {
+      // 게임 비교 텍스트를 바로 포맷팅된 HTML로 변환
+      const formattedText = formatMarkdown(text);
+      return [
+        <div key="game-comparison" className="p-4 mb-4">
+          <p 
+            className="text-gray-800" 
+            dangerouslySetInnerHTML={{ __html: formattedText }}
+          />
+        </div>
+      ];
+    }
 
-  lines.forEach((line, idx) => {
-    // 빈 라인 무시
-    if (!line || !line.trim()) return;
+    // 따옴표로 된 게임 제목을 모두 **게임제목** 형식으로 변환
+    text = text.replace(/"([^"]+)"/g, '**$1**');
+    
+    // 작은따옴표로 된 게임 제목도 처리
+    text = text.replace(/'([^']+)'/g, '**$1**');
 
-    // 게임 제목 처리 - [게임이름] :: appid 형식 파싱
-    if (line.match(/^\[.*\](\s*)::\s*\d+$/)) {
-      // 이전 게임 정보가 있으면 먼저 추가
-      if (currentGame && currentDescription.length > 0) {
-        // appid가 있으면 Steam 링크 생성
-        if (currentAppId) {
-          currentGameLink = `https://store.steampowered.com/app/${currentAppId}`;
-          currentImageLink = `https://cdn.akamai.steamstatic.com/steam/apps/${currentAppId}/header.jpg`;
+    const lines = text.split("\n").filter((line) => line && line.trim() !== "");
+    if (lines.length === 0) return [<p key="empty-text" className="text-gray-800">{text}</p>];
+    
+    const result = [];
+    let gameCards = [];
+    let currentGame = null;
+    let currentDescription = [];
+    let currentDescriptionItems = []; // 구조화된 설명 항목들 (장르, 스토리 등)
+    let currentGameLink = null;
+    let currentImageLink = null;
+    let currentAppId = null;
+    let finalMessage = null;
+    
+    // 포맷팅할 설명 항목들을 임시 저장
+    let descriptionItems = [];
+    let plainTextItems = [];
+    
+    // 게임 카드가 없는 설명 항목들을 처리하기 위한 변수
+    let hasGameTitle = false;
+
+    lines.forEach((line, idx) => {
+      try {
+        const parsedLine = parseGameLine(line);
+        if (!parsedLine) return;
+        
+        // 게임 제목이 감지되면 플래그 설정
+        if (parsedLine.type === 'gameTitle') {
+          hasGameTitle = true;
         }
         
-        gameCards.push(
-          <div key={`game-${gameCards.length}`} className="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.67rem)]">
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col cursor-default">
-              {currentImageLink && currentGameLink && (
-                <a 
-                  href={currentGameLink} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block hover:opacity-90 transition-opacity aspect-[460/215] overflow-hidden bg-gray-100"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <img 
-                    src={currentImageLink} 
-                    alt={currentGame} 
-                    className="w-full h-full object-contain cursor-pointer"
-                    loading="lazy"
-                  />
-                </a>
-              )}
-              <div className="p-4 flex-1 flex flex-col">
-                <h3 className="text-lg font-bold text-blue-950 mb-2">
-                  <a 
-                    href={currentGameLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="hover:text-blue-700 transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {currentGame}
-                  </a>
-                </h3>
-                <p className="text-gray-700 text-sm mt-1">{currentDescription.join(" ")}</p>
-              </div>
-            </div>
-          </div>
-        );
+        // 설명 항목 수집
+        if (parsedLine.type === 'descriptionItem') {
+          descriptionItems.push(parsedLine);
+        }
+        
+        // 일반 텍스트 수집
+        if (parsedLine.type === 'text' || parsedLine.type === 'bulletPoint' || parsedLine.type === 'description') {
+          plainTextItems.push(parsedLine.value);
+        }
+        
+        switch (parsedLine.type) {
+          case 'gameTitle':
+            // 이전 게임 정보가 있으면 먼저 추가
+            if (currentGame && (currentDescription.length > 0 || currentDescriptionItems.length > 0 || currentGame)) {
+              // appid가 있으면 Steam 링크 생성
+              if (currentAppId) {
+                currentGameLink = `https://store.steampowered.com/app/${currentAppId}`;
+                currentImageLink = `https://cdn.akamai.steamstatic.com/steam/apps/${currentAppId}/header.jpg`;
+              }
+              
+              // 설명 텍스트 생성 - 일반 설명과 구조화된 설명 항목 모두 포함
+              let description = currentDescription.join(" ");
+              
+              // 설명 항목이 있을 경우 HTML로 변환
+              if (currentDescriptionItems.length > 0) {
+                const formattedItems = formatDescriptionItems(currentDescriptionItems);
+                description = description ? `${description}<br /><br />${formattedItems}` : formattedItems;
+              }
+              
+              // 마크다운 스타일 포맷팅 적용
+              description = formatMarkdown(description);
+              
+              gameCards.push(
+                <GameCard 
+                  key={`game-${gameCards.length}`}
+                  game={currentGame}
+                  description={description}
+                  gameLink={currentGameLink}
+                  imageLink={currentImageLink}
+                />
+              );
+            }
+            
+            // 새 게임 시작
+            currentGame = parsedLine.gameTitle;
+            currentAppId = parsedLine.appId;
+            currentDescription = [];
+            currentDescriptionItems = [];
+            currentGameLink = null;
+            currentImageLink = null;
+            
+            // appid가 있으면 Steam 링크 생성
+            if (currentAppId) {
+              currentGameLink = `https://store.steampowered.com/app/${currentAppId}`;
+              currentImageLink = `https://cdn.akamai.steamstatic.com/steam/apps/${currentAppId}/header.jpg`;
+            }
+            break;
+            
+          case 'gameLink':
+            currentGameLink = parsedLine.value;
+            break;
+            
+          case 'imageLink':
+            currentImageLink = parsedLine.value;
+            break;
+          
+          case 'descriptionItem':
+            // 구조화된 설명 항목 추가 (예: 장르, 스토리 등)
+            if (currentGame) {
+              currentDescriptionItems.push({
+                label: parsedLine.label,
+                content: parsedLine.content
+              });
+            }
+            break;
+            
+          case 'description':
+          case 'bulletPoint':
+            if (currentGame) {
+              currentDescription.push(parsedLine.value);
+            }
+            break;
+            
+          case 'sectionTitle':
+            result.push(
+              <p key={`title-${idx}`} className="font-bold text-blue-600 text-lg mt-2 mb-3">
+                {parsedLine.value} 🎮
+              </p>
+            );
+            break;
+            
+          case 'text':
+            // 이미 게임 카드가 생성되었고 설명이 없는 경우, 이 텍스트를 설명으로 사용
+            if (currentGame && currentDescription.length === 0 && currentDescriptionItems.length === 0) {
+              currentDescription.push(parsedLine.value);
+            } else if (!currentGame) {
+              // 현재 게임이 없는 경우 최종 메시지로 처리
+              if (!finalMessage) {
+                finalMessage = parsedLine.value;
+              } else {
+                finalMessage += " " + parsedLine.value;
+              }
+            }
+            break;
+        }
+      } catch (lineError) {
+        console.error("라인 처리 중 오류:", lineError);
+        // 오류가 발생해도 계속 진행
       }
-      
-      // 새 게임 시작 - 게임명과 appid 분리
-      const parts = line.split(/\s*::\s*/);
-      currentGame = parts[0].replace(/[\[\]]/g, "").trim();
-      currentAppId = parts.length > 1 ? parts[1].trim() : null;
-      currentDescription = [];
-      currentGameLink = null;
-      currentImageLink = null;
-      
+    });
+
+    // 마지막 게임 정보 추가
+    if (currentGame && (currentDescription.length > 0 || currentDescriptionItems.length > 0 || currentGame)) {
       // appid가 있으면 Steam 링크 생성
       if (currentAppId) {
         currentGameLink = `https://store.steampowered.com/app/${currentAppId}`;
         currentImageLink = `https://cdn.akamai.steamstatic.com/steam/apps/${currentAppId}/header.jpg`;
       }
-    } 
-    // 바로가기 링크 처리 (appid가 없을 경우를 위한 백업)
-    else if (line.includes("바로가기 링크 :")) {
-      currentGameLink = line.split(": ")[1]?.trim() || currentGameLink;
-    }
-    // 이미지 링크 처리 (appid가 없을 경우를 위한 백업)
-    else if (line.includes("이미지 링크 :")) {
-      currentImageLink = line.split(": ")[1]?.trim() || currentImageLink;
-    }
-    // 추천 이유 및 설명 처리
-    else if (line.includes("추천 이유 및 설명")) {
-      const description = line.includes(":") 
-        ? line.split(":")[1]?.trim()
-        : line.trim();
-      if (description) {
-        currentDescription.push(description);
+      
+      // 설명 텍스트 생성 - 일반 설명과 구조화된 설명 항목 모두 포함
+      let description = currentDescription.join(" ");
+      
+      // 설명 항목이 있을 경우 HTML로 변환
+      if (currentDescriptionItems.length > 0) {
+        const formattedItems = formatDescriptionItems(currentDescriptionItems);
+        description = description ? `${description}<br /><br />${formattedItems}` : formattedItems;
       }
-    }
-    // 추천 이유 없이 하이픈(-)으로 시작하는 설명 처리
-    else if (line.trim().startsWith("-") && currentGame) {
-      currentDescription.push(line.trim().substring(1).trim());
-    }
-    // "추천 게임" 텍스트 처리
-    else if (line.startsWith("추천 게임")) {
-      result.push(
-        <p key={`title-${idx}`} className="font-bold text-blue-600 text-lg mt-2 mb-3">
-          {line} 🎮
-        </p>
+      
+      // 마크다운 스타일 포맷팅 적용
+      description = formatMarkdown(description);
+      
+      gameCards.push(
+        <GameCard 
+          key={`game-${gameCards.length}`}
+          game={currentGame}
+          description={description}
+          gameLink={currentGameLink}
+          imageLink={currentImageLink}
+        />
       );
     }
-    // 일반 텍스트는 마지막 멘트로 저장
-    else if (!line.includes("이미지 링크 :") && !line.includes("바로가기 링크 :")) {
-      finalMessage = line;
-    }
-  });
 
-  // 마지막 게임 정보 추가
-  if (currentGame && currentDescription.length > 0) {
-    // appid가 있으면 Steam 링크 생성
-    if (currentAppId) {
-      currentGameLink = `https://store.steampowered.com/app/${currentAppId}`;
-      currentImageLink = `https://cdn.akamai.steamstatic.com/steam/apps/${currentAppId}/header.jpg`;
-    }
-    
-    gameCards.push(
-      <div key={`game-${gameCards.length}`} className="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.67rem)]">
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col cursor-default">
-          {currentImageLink && currentGameLink && (
-            <a 
-              href={currentGameLink} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="block hover:opacity-90 transition-opacity aspect-[460/215] overflow-hidden bg-gray-100"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img 
-                src={currentImageLink} 
-                alt={currentGame} 
-                className="w-full h-full object-contain cursor-pointer"
-                loading="lazy"
-              />
-            </a>
-          )}
-          <div className="p-4 flex-1 flex flex-col">
-            <h3 className="text-lg font-bold text-blue-950 mb-2">
-              <a 
-                href={currentGameLink} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="hover:text-blue-700 transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {currentGame}
-              </a>
-            </h3>
-            <p className="text-gray-700 text-sm mt-1">{currentDescription.join(" ")}</p>
-          </div>
+    // 게임 카드가 있으면 그리드로 추가
+    if (gameCards.length > 0) {
+      result.push(
+        <div key="game-cards-container" className="flex flex-wrap gap-4 mb-6">
+          {gameCards}
         </div>
-      </div>
-    );
-  }
+      );
+    } 
+    // 게임 카드는 없지만 설명 항목이 있는 경우 (설명만 있는 경우)
+    else if (!hasGameTitle && descriptionItems.length > 0) {
+      const formattedItems = formatDescriptionItems(descriptionItems);
+      const descriptionText = plainTextItems.length > 0 
+        ? `${plainTextItems.join(" ")}<br /><br />${formattedItems}`
+        : formattedItems;
+        
+      result.push(
+        <div key="description-only" className="p-4 mb-4">
+          <p 
+            className="text-gray-800" 
+            dangerouslySetInnerHTML={{ __html: formatMarkdown(descriptionText) }}
+          />
+        </div>
+      );
+    }
+    // 일반 텍스트만 있고 앞에서 처리되지 않은 경우 (게임 카드나 설명 항목이 없는 경우)
+    else if (plainTextItems.length > 0 && result.length === 0 && gameCards.length === 0) {
+      const plainText = plainTextItems.join(" ");
+      const formattedText = formatMarkdown(plainText);
+      
+      result.push(
+        <div key="plain-text" className="p-4 mb-4">
+          <p 
+            className="text-gray-800" 
+            dangerouslySetInnerHTML={{ __html: formattedText }}
+          />
+        </div>
+      );
+    }
 
-  // 게임 카드가 있으면 그리드로 추가
-  if (gameCards.length > 0) {
-    result.push(
-      <div key="game-cards-container" className="flex flex-wrap gap-4 mb-6">
-        {gameCards}
-      </div>
-    );
-  }
+    // 마지막 멘트가 있다면 마지막에 추가
+    if (finalMessage && !result.find(item => item.key === "description-only" || item.key === "plain-text" || item.key === "game-comparison")) {
+      result.push(
+        <p key="final-message" className="text-gray-800 mt-4">{finalMessage}</p>
+      );
+    }
 
-  // 마지막 멘트가 있다면 마지막에 추가
-  if (finalMessage) {
-    result.push(
-      <p key="final-message" className="text-gray-800 mt-4">{finalMessage}</p>
-    );
+    // 결과가 없으면 원본 텍스트 표시
+    return result.length > 0 ? result : [<p key="raw-text" className="text-gray-800">{text}</p>];
+  } catch (error) {
+    // 포맷팅 중 에러가 발생한 경우 원본 텍스트를 그대로 표시
+    console.error("챗봇 응답 포맷팅 오류:", error);
+    return [<p key="error-text" className="text-gray-800">{text}</p>];
   }
-
-  return result;
 };
 
 export default function ChatbotUI() {
@@ -304,6 +551,9 @@ export default function ChatbotUI() {
   // 세션 선택 시 이전 대화 내역 불러오기 함수 추가
   const fetchSessionMessages = async (sessionId) => {
     try {
+      // 세션 변경 시 isBotResponding 상태를 초기화
+      setIsBotResponding(false);
+      
       const response = await fetch(`${BASE_URL}/chat/${sessionId}/message/`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -347,6 +597,9 @@ export default function ChatbotUI() {
     }
   
     try {
+      // 새 세션 생성 시 isBotResponding 상태를 초기화
+      setIsBotResponding(false);
+      
       const response = await fetch(`${BASE_URL}/chat/`, {
         method: "POST",
         headers: {
@@ -385,11 +638,9 @@ export default function ChatbotUI() {
       try {
         // 웹소켓 URL에 토큰을 포함
         const wsUrl = `${WS_URL}${activeSessionId}/?token=${token}`;
-        console.log('Connecting to WebSocket:', wsUrl);
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-          console.log('웹소켓 연결됨');
           setIsConnected(true);
           setError(null);
         };
@@ -449,14 +700,12 @@ export default function ChatbotUI() {
               });
             }
           } catch (error) {
-            console.error('메시지 처리 중 오류:', error);
             setError('메시지 처리 중 오류가 발생했습니다.');
             setIsBotResponding(false);
           }
         };
 
         ws.onclose = (event) => {
-          console.log('웹소켓 연결 종료', event.code, event.reason);
           setIsConnected(false);
           
           // 비정상 종료 코드에 따른 에러 메시지
@@ -468,7 +717,6 @@ export default function ChatbotUI() {
         };
 
         ws.onerror = (error) => {
-          console.error('웹소켓 에러:', error);
           setError('연결 중 오류가 발생했습니다.');
         };
 
@@ -488,7 +736,6 @@ export default function ChatbotUI() {
           }
         };
       } catch (error) {
-        console.error('웹소켓 설정 오류:', error);
         setError('웹소켓 연결을 설정할 수 없습니다.');
       }
     }
@@ -823,7 +1070,16 @@ export default function ChatbotUI() {
                       >
                         {msg.sender === "bot" ? (
                           <div className="flex items-start gap-2">
-                            <div className="w-full">{formatChatbotResponse(msg.text)}</div>
+                            <div className="w-full">
+                              {(() => {
+                                try {
+                                  return formatChatbotResponse(msg.text);
+                                } catch (error) {
+                                  console.error("봇 메시지 렌더링 오류:", error);
+                                  return <p className="text-gray-800">{msg.text || "메시지를 표시할 수 없습니다."}</p>;
+                                }
+                              })()}
+                            </div>
                           </div>
                         ) : (
                           msg.text
@@ -863,7 +1119,7 @@ export default function ChatbotUI() {
 
         {/* 입력창 */}
         <div className="flex-shrink-0 p-4 border-none bg-white">
-          <div className="flex items-center gap-3 max-w-[95%] mx-auto">
+          <div className="flex items-center gap-3 max-w-[98%] mx-auto">
             <form 
               onSubmit={(e) => { 
                 e.preventDefault(); 
@@ -871,23 +1127,34 @@ export default function ChatbotUI() {
                   sendMessage(); 
                 }
               }} 
-              className="flex items-center w-full max-w-4xl border border-gray-300 rounded-lg p-3 bg-white shadow-md">
+              className="relative flex items-center w-full max-w-5xl border border-gray-300 rounded-2xl px-4 py-2 bg-white shadow-md"
+            >
+              {/* ✅ 입력창 (textarea) */}
               <textarea 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                onInput={(e) => {
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
                 onKeyDown={handleKeyDown} 
                 placeholder={isBotResponding ? "챗봇이 응답하는 중입니다..." : "메시지를 입력하세요..."}
                 disabled={isBotResponding}
-                className="flex-1 border-none focus:ring-0 focus:outline-none px-3 resize-none min-h-[40px] max-h-[120px] overflow-y-auto py-2 leading-normal"
+                className="flex-1 border-none focus:ring-0 focus:outline-none px-3 resize-none min-h-[50px] max-h-[200px] overflow-y-auto py-3 leading-normal pr-16 text-base placeholder-gray-500 text-gray-900"
                 rows="1"
+                style={{ height: 'auto' }}
               />
-              <Button 
+
+                      {/* ✅ 버튼을 입력창 내부 우측 하단에 고정 */}
+                      <button 
                 type="submit" 
                 disabled={isBotResponding}
-                className={`ml-2 ${isBotResponding ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-950 hover:bg-blue-900'} text-white p-2 rounded-lg`}
-              >
+                className={`absolute bottom-3 right-3 w-10 h-10 flex items-center justify-center rounded-lg shadow-md ${
+                  isBotResponding ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-950 hover:bg-blue-900 text-white'
+                }`}
+                      >
                 <Send size={20} />
-              </Button>
+              </button>
             </form>
           </div>
         </div>

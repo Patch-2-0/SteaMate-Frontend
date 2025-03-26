@@ -428,41 +428,53 @@ export default function MyPage() {
           {/* 기본 정보 */}
           <div className="mb-6">
             <h2 className="text-lg font-semibold mb-2">기본 정보</h2>
-            {isEditing ? (
-              <form onSubmit={handleEdit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">닉네임</label>
-                  <Input
-                    value={editForm.nickname}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, nickname: e.target.value })
-                    }
-                  />
-                </div>
-  
-                <div className="flex gap-2">
-                  <Button type="submit">저장</Button>
+            <div className="flex justify-between items-center">
+              {isEditing ? (
+                <form onSubmit={handleEdit} className="space-y-4 flex-grow">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">닉네임</label>
+                    <Input
+                      value={editForm.nickname}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, nickname: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="submit" className="bg-blue-950 hover:bg-blue-900">저장</Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsEditing(false)}
+                      className="bg-gray-300 hover:bg-gray-400"
+                    >
+                      취소
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <p className="text-gray-700 flex-grow">
+                    <span className="font-medium">닉네임:</span> <strong>{userData.nickname}</strong>
+                  </p>
                   <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsEditing(false)}
+                    className="ml-4 w-28 px-4 py-2 bg-blue-950 hover:bg-blue-900 flex-shrink-0"
+                    onClick={() => setIsEditing(true)}
                   >
-                    취소
+                    정보 수정
                   </Button>
-                </div>
-              </form>
-            ) : (
-              <p className="text-gray-700">
-                <span className="font-medium">닉네임:</span> {userData.nickname}
-              </p>
-            )}
+                </>
+              )}
+            </div>
           </div>
+
   
           {/* Steam 정보 */}
           {userData.steam_profile ? (
             <div className="mb-4">
               <h2 className="text-lg font-semibold mb-3">Steam 정보</h2>
               <div className="flex items-center gap-4 bg-white p-4 rounded-lg shadow-sm">
+                {/* 프로필 이미지 */}
                 <img
                   src={userData.steam_profile.avatar}
                   alt="Steam Avatar"
@@ -472,19 +484,27 @@ export default function MyPage() {
                     e.target.src = "/default-avatar.png";
                   }}
                 />
-                <div className="flex flex-col">
-                  <p className="text-gray-800 font-bold">
-                    {userData.steam_profile.personname}
-                  </p>
-                  <button
-                    onClick={() => window.open(userData.steam_profile.profileurl, "_blank", "noopener")}
-                    className="bg-blue-700 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-800 transition duration-200 w-full sm:w-auto"
-                    aria-label="Steam 프로필 방문하기"
-                  >
-                    Steam 프로필 방문하기
-                  </button>
-                </div>
-              </div>
+
+          {/* 닉네임 & 보유 게임 수 */}
+            <div className="flex flex-col flex-grow">
+              <p className="text-xl text-gray-800 font-bold">
+                {userData.steam_profile.personname}
+              </p>
+              <p className="text-gray-600 text-sm">
+                보유 게임: <span className="font-semibold">{userData.library_games.length}개</span>
+              </p>
+            </div>
+
+          {/* Steam 프로필 방문하기 버튼 */}
+            <button
+            onClick={() => window.open(userData.steam_profile.profileurl, "_blank", "noopener")}
+            className="bg-blue-950 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-900 transition duration-200"
+            aria-label="Steam 프로필 방문하기"
+            >
+              Steam 프로필 <br/> 방문하기
+            </button>
+          </div>
+          
           {/* Steam 라이브러리 동기화 버튼 */}
           {userData.steam_profile && (
             <div className="mt-4">
@@ -543,16 +563,9 @@ export default function MyPage() {
           )}
 
   
-          {/* 버튼: 정보 수정 & 회원 탈퇴 */}
-          <div className="flex gap-2 mt-auto">
-            {!isEditing && (
-              <Button className="bg-blue-950 hover:bg-blue-900 w-full" onClick={() => setIsEditing(true)}>
-                정보 수정
-              </Button>
-            )}
-            <Button className="bg-red-600 hover:bg-red-700 w-full" variant="destructive" onClick={handleDelete}>
-              회원 탈퇴
-            </Button>
+          {/* 회원 탈퇴 */}
+          <div className="mt-auto text-gray-400 text-right">
+            <p> 회원 탈퇴를 원하시면 <span className="underline cursor-pointer hover:text-gray-500" onClick={handleDelete}>여기를 클릭</span>하세요.</p>
           </div>
         </div>
   
@@ -572,34 +585,36 @@ export default function MyPage() {
               </div>
             </div>
           )}
-  
-          {/* 선호 게임 */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-2">선호 게임</h2>
 
-              {userData.library_games?.length > 0 && (
-                <Button
-                  className="mt-2 mb-1 px-3 py-1 text-sm bg-purple-500 text-purple-900 rounded-md hover:bg-purple-300"
-                  onClick={() => setIsSelectingPreferredGame(!isSelectingPreferredGame)}
-                >
-                  {isSelectingPreferredGame ? "선호 게임 선택 취소" : "선호 게임 수정"}
-                </Button>
-              )}
+      {/* 선호 게임 */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <h2 className="text-lg font-semibold">선호 게임</h2>
 
-              {userData.preferred_game && userData.preferred_game.length > 0 ? (
-                <div className="flex flex-wrap gap-3 mt-2">
-                  {userData.preferred_game.map((game, index) => (
-                    <span key={index} className="bg-green-100 text-green-800 px-3 py-1.5 rounded-md">
-                      {game}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-red-700 font-medium bg-red-100 border border-red-300 px-4 py-2 rounded-md mt-2">
-                  🚨 선호 게임이 없습니다. 라이브러리를 동기화하고 보유 게임에서 선택해 저장해보세요!
-                </p>
-              )}
-            </div>
+          {userData.library_games?.length > 0 && (
+            <Button
+              className="px-2 py-1 text-sm bg-green-700 text-white rounded-md hover:bg-green-600 transition"
+              onClick={() => setIsSelectingPreferredGame(!isSelectingPreferredGame)}
+            >
+              {isSelectingPreferredGame ? "수정 취소" : "선호 게임 추가하기"}
+            </Button>
+          )}
+        </div>
+
+        {userData.preferred_game && userData.preferred_game.length > 0 ? (
+          <div className="flex flex-wrap gap-3 mt-2">
+            {userData.preferred_game.map((game, index) => (
+              <span key={index} className="bg-green-100 text-green-800 px-3 py-1.5 rounded-md">
+                {game}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-red-700 font-medium bg-red-100 border border-red-300 px-4 py-2 rounded-md mt-2">
+            🚨 선호 게임이 없습니다. 라이브러리를 동기화하고 보유 게임에서 선택해 저장해보세요!
+          </p>
+        )}
+      </div>
 
           {/* 보유 게임 선택 UI */}
           {userData.library_games && (
@@ -608,7 +623,7 @@ export default function MyPage() {
               {isSelectingPreferredGame && (
                 <Button
                   onClick={handleSavePreferredGames}
-                  className="mt-4 mb-4 px-4 py-2 bg-sky-700 text-white rounded-md hover:bg-blue-700"
+                  className="mt-4 mb-4 px-4 py-2 bg-blue-950 text-white rounded-md hover:bg-blue-900"
                 >
                   선택한 게임을 선호 게임으로 저장
                 </Button>
@@ -628,8 +643,8 @@ export default function MyPage() {
                         }
                         className={`px-3 py-1.5 rounded-md border transition ${
                           isSelected
-                            ? "bg-purple-400 text-white border-purple-300"
-                            : "pg-gray-500 text-gray-500 border-gray-500"
+                            ? "bg-gray-700 text-white border-gray-500"
+                            : "bg-gray-200 text-gray-500 border-gray-500"
                         } ${isSelectingPreferredGame ? "cursor-pointer" : "cursor-default opacity-60"}`}
                       >
                         {game.title} ({Math.floor(game.playtime / 60)}시간 {game.playtime % 60}분)
