@@ -502,22 +502,23 @@ export default function MyPage() {
                 </p>
               )}
 
-              {syncError && (
+              {(syncError || userData.library_games?.length === 0) && (
                 <div className="mt-2">
-                  <p className="text-red-500 text-sm">
-                    {syncError}
-                  </p>
-                  {syncError.includes('Steam 프로필이 비공개') && (
-                    <div className="mt-2 text-sm text-gray-600">
-                      <p>Steam 프로필을 공개로 설정하는 방법:</p>
-                      <ol className="list-decimal list-inside mt-1">
-                        <li>Steam 프로필 페이지로 이동</li>
-                        <li>프로필 수정 버튼 클릭</li>
-                        <li>프라이버시 설정에서 "게임 세부 정보"를 "공개"로 변경</li>
-                        <li>변경사항 저장</li>
-                      </ol>
-                    </div>
+                  {syncError && (
+                    <p className="text-red-500 text-sm">
+                      {syncError}
+                    </p>
                   )}
+                  <div className="mt-4 text-sm text-gray-600 bg-yellow-50 border border-yellow-300 p-4 rounded-md">
+                    <p>Steam 라이브러리가 비어있거나, Steam 프로필이 비공개일 경우 동기화가 안 될 수 있습니다.</p>
+                    <p className="mt-2 font-semibold">Steam 프로필을 공개로 설정하는 방법:</p>
+                    <ol className="list-decimal list-inside mt-1">
+                      <li>Steam 프로필 페이지로 이동</li>
+                      <li>프로필 수정 버튼 클릭</li>
+                      <li>프라이버시 설정에서 "게임 세부 정보"를 "공개"로 변경</li>
+                      <li>변경사항 저장</li>
+                    </ol>
+                  </div>
                 </div>
               )}
             </div>
@@ -576,12 +577,14 @@ export default function MyPage() {
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">선호 게임</h2>
 
-              <Button
-                className="mt-2 mb -1 px-3 py-1 text-sm bg-purple-200 text-purple-900 rounded-md hover:bg-purple-700"
-                onClick={() => setIsSelectingPreferredGame(!isSelectingPreferredGame)}
-              >
-                {isSelectingPreferredGame ? "선호 게임 선택 취소" : "선호 게임 수정"}
-              </Button>
+              {userData.library_games?.length > 0 && (
+                <Button
+                  className="mt-2 mb-1 px-3 py-1 text-sm bg-purple-500 text-purple-900 rounded-md hover:bg-purple-300"
+                  onClick={() => setIsSelectingPreferredGame(!isSelectingPreferredGame)}
+                >
+                  {isSelectingPreferredGame ? "선호 게임 선택 취소" : "선호 게임 수정"}
+                </Button>
+              )}
 
               {userData.preferred_game && userData.preferred_game.length > 0 ? (
                 <div className="flex flex-wrap gap-3 mt-2">
@@ -593,7 +596,7 @@ export default function MyPage() {
                 </div>
               ) : (
                 <p className="text-sm text-red-700 font-medium bg-red-100 border border-red-300 px-4 py-2 rounded-md mt-2">
-                  🚨 선호 게임이 없습니다. 보유 게임에서 선택해 저장해보세요!
+                  🚨 선호 게임이 없습니다. 라이브러리를 동기화하고 보유 게임에서 선택해 저장해보세요!
                 </p>
               )}
             </div>
@@ -605,7 +608,7 @@ export default function MyPage() {
               {isSelectingPreferredGame && (
                 <Button
                   onClick={handleSavePreferredGames}
-                  className="mt-4 mb-4 px-4 py-2 bg-blue-950 text-white rounded-md hover:bg-blue-700"
+                  className="mt-4 mb-4 px-4 py-2 bg-sky-700 text-white rounded-md hover:bg-blue-700"
                 >
                   선택한 게임을 선호 게임으로 저장
                 </Button>
@@ -625,8 +628,8 @@ export default function MyPage() {
                         }
                         className={`px-3 py-1.5 rounded-md border transition ${
                           isSelected
-                            ? "bg-purple-600 text-white border-purple-700"
-                            : "bg-purple-100 text-purple-800 border-purple-300"
+                            ? "bg-purple-400 text-white border-purple-300"
+                            : "pg-gray-500 text-gray-500 border-gray-500"
                         } ${isSelectingPreferredGame ? "cursor-pointer" : "cursor-default opacity-60"}`}
                       >
                         {game.title} ({Math.floor(game.playtime / 60)}시간 {game.playtime % 60}분)
