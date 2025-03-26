@@ -4,6 +4,7 @@ import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { motion } from "framer-motion";
 import { Send, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const BASE_URL = process.env.REACT_APP_API_URL;
 const WS_URL = process.env.REACT_APP_WS_URL;
@@ -17,6 +18,13 @@ const formatInitialGreeting = () => {
         <br />
         MyPage에서 라이브러리를 연동하면 더 좋은 추천을 받을 수 있어요!
       </p>
+
+    {/* ✅ Steam 연동 버튼 추가 */}
+    <Link to="/mypage" className="ml-auto">
+      <button className="bg-blue-950 text-white py-2 px-6 rounded-lg hover:bg-blue-900 text-center leading-tight shadow-md">
+        스팀 계정 연동 혹은 라이브러리 연동하러 가기
+      </button>
+      </Link>
       
       <p className="font-medium text-blue-950 mb-2">다음과 같이 물어보세요! 👇</p>
       
@@ -863,7 +871,7 @@ export default function ChatbotUI() {
 
         {/* 입력창 */}
         <div className="flex-shrink-0 p-4 border-none bg-white">
-          <div className="flex items-center gap-3 max-w-[95%] mx-auto">
+          <div className="flex items-center gap-3 max-w-[98%] mx-auto">
             <form 
               onSubmit={(e) => { 
                 e.preventDefault(); 
@@ -871,23 +879,34 @@ export default function ChatbotUI() {
                   sendMessage(); 
                 }
               }} 
-              className="flex items-center w-full max-w-4xl border border-gray-300 rounded-lg p-3 bg-white shadow-md">
+              className="relative flex items-center w-full max-w-5xl border border-gray-300 rounded-2xl px-4 py-2 bg-white shadow-md"
+            >
+              {/* ✅ 입력창 (textarea) */}
               <textarea 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                onInput={(e) => {
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
                 onKeyDown={handleKeyDown} 
                 placeholder={isBotResponding ? "챗봇이 응답하는 중입니다..." : "메시지를 입력하세요..."}
                 disabled={isBotResponding}
-                className="flex-1 border-none focus:ring-0 focus:outline-none px-3 resize-none min-h-[40px] max-h-[120px] overflow-y-auto py-2 leading-normal"
+                className="flex-1 border-none focus:ring-0 focus:outline-none px-3 resize-none min-h-[50px] max-h-[200px] overflow-y-auto py-3 leading-normal pr-16 text-base placeholder-gray-500 text-gray-900"
                 rows="1"
+                style={{ height: 'auto' }}
               />
-              <Button 
+
+                      {/* ✅ 버튼을 입력창 내부 우측 하단에 고정 */}
+                      <button 
                 type="submit" 
                 disabled={isBotResponding}
-                className={`ml-2 ${isBotResponding ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-950 hover:bg-blue-900'} text-white p-2 rounded-lg`}
-              >
+                className={`absolute bottom-3 right-3 w-10 h-10 flex items-center justify-center rounded-lg shadow-md ${
+                  isBotResponding ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-950 hover:bg-blue-900 text-white'
+                }`}
+                      >
                 <Send size={20} />
-              </Button>
+              </button>
             </form>
           </div>
         </div>
