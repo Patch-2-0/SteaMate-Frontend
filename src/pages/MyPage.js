@@ -549,12 +549,12 @@ export default function MyPage() {
               <h2 className="text-lg font-semibold mb-4">Steam 계정 연동</h2>
               <div className="space-y-4">
                 <p className="text-gray-600">
-                  Steam 계정을 연동하면 게임 라이브러리를 자동으로 가져올 수 있습니다.
+                  Steam 계정을 연동하면 게임 라이브러리를 가져올 수 있습니다.
                 </p>
                 <Button 
                   onClick={handleSteamLink}
                   variant="secondary"
-                  className="w-full"
+                  className="w-full bg-blue-950 hover:bg-blue-900"
                 >
                   Steam 계정 연동하기
                 </Button>
