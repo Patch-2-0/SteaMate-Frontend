@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 
@@ -11,6 +11,7 @@ const Login = () => {
   const [error, setError] = useState(null);
   const [verificationMessage, setVerificationMessage] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useContext(AuthContext);  // AuthContext 사용
 
   // URL 파라미터 확인을 위한 useEffect 추가
@@ -67,7 +68,10 @@ const Login = () => {
         // JWT 토큰에서 user_id 가져오기
         const user_id = parseJwt(data.access).user_id;
         login(data.access, user_id);
-        navigate("/");
+        
+        // 리다이렉트 경로가 있으면 해당 경로로, 없으면 홈으로 이동
+        const from = location.state?.from || '/';
+        navigate(from);
       } else {
         throw new Error("JWT 토큰이 응답에 없습니다.");
       }
