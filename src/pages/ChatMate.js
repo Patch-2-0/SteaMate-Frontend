@@ -217,8 +217,8 @@ const formatDescriptionItems = (items) => {
 const formatMarkdown = (text) => {
   if (!text) return "";
   
-  // 볼드 텍스트 변환 (**텍스트**)
-  text = text.replace(/\*\*([^*]+)\*\*/g, '<span class="font-bold">$1</span>');
+  // 볼드 텍스트 변환 (**텍스트**)에 줄바꿈 추가 (텍스트 앞에 추가)
+  text = text.replace(/\*\*([^*]+)\*\*/g, '<br /><span class="font-bold">$1</span>');
   
   // 이탤릭 텍스트 변환 (*텍스트*)
   text = text.replace(/\*([^*]+)\*/g, '<span class="italic">$1</span>');
