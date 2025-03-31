@@ -20,9 +20,9 @@
 
 ![Image](https://github.com/user-attachments/assets/0e85527b-666c-4201-aff4-777f02b50aa0)
 
-| 개발 기간 | 팀명 |SA 문서 | Frontend 레포지토리 |
+| 개발 기간 | 팀명 |SA 문서 | Backend 레포지토리 |
 | :----------:| :-----: | :-------: | ------------------- |
-| 2025년 02월 27일 ~ 2025년 03월 31일 | Patch 2.0 | [SA 문서 바로가기](https://www.notion.so/teamsparta/SA-V-3-0-0-1ad2dc3ef514808e9d6ed92aa3f33c77?pvs=4) | [SteaMate-Frontend](https://github.com/hzi09/SteaMate-Frontend) | 
+| 2025년 02월 27일 ~ 2025년 03월 31일 | Patch 2.0 | [SA 문서 바로가기](https://www.notion.so/teamsparta/SA-V-3-0-0-1ad2dc3ef514808e9d6ed92aa3f33c77?pvs=4) | [SteaMate-Backend](https://github.com/hzi09/SteaMate-Backend) | 
 
 </div>
 
