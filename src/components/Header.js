@@ -67,7 +67,7 @@ const Header = () => {
         <Link to="/pickmate" className="button-pixel">PickMate</Link>
       </div>
 
-      <div className="flex space-x-4">
+      <div className="hidden md:flex space-x-4">
         {isAuth ? (
           <>
             <Link to="/mypage" className="button-pixel">Mypage</Link>
@@ -88,13 +88,13 @@ const Header = () => {
           <Link to="/pickmate" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>PickMate</Link>
           {isAuth ? (
             <>
-              <Link to="/mypage" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>마이페이지</Link>
-              <button onClick={handleLogout} className="button-pixel w-3/4">로그아웃</button>
+              <Link to="/mypage" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>Mypage</Link>
+              <button onClick={handleLogout} className="button-pixel w-3/4">Logout</button>
             </>
           ) : (
             <>
-              <Link to="/login" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>로그인</Link>
-              <Link to="/signup" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>회원가입</Link>
+              <Link to="/login" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>Login</Link>
+              <Link to="/signup" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>Signup</Link>
             </>
           )}
         </div>
