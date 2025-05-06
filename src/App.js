@@ -12,6 +12,9 @@ import MyPage from "./pages/MyPage";
 import NotFound from "./pages/404";
 import ErrorPage from "./pages/ErrorPage";
 import VerifyEmail from "./pages/VerifyEmail";
+import Community from "./pages/Community";
+import CommunityDetail from "./pages/CommunityDetail";
+import CommunityEdit from "./pages/CommunityEdit";
 
 // 인증이 필요한 페이지를 위한 컴포넌트
 const AuthRoute = ({ children, path }) => {
@@ -48,6 +51,21 @@ function App() {
         <Route path="/pickmate" element={
           <AuthRoute path="/pickmate">
             <Layout><PickMate /></Layout>
+          </AuthRoute>
+        } />
+        <Route path="/community" element={
+          <AuthRoute path="/community">
+            <Layout><Community /></Layout>
+          </AuthRoute>
+        } />
+        <Route path="/community/:postId" element={
+          <AuthRoute path="/community/:postId">
+            <Layout><CommunityDetail /></Layout>
+          </AuthRoute>
+        } />
+        <Route path="/community/edit/:id" element={
+          <AuthRoute path="/community/edit/:id">
+            <Layout><CommunityEdit /></Layout>
           </AuthRoute>
         } />
         <Route path="/login" element={<Layout><Login /></Layout>} />
