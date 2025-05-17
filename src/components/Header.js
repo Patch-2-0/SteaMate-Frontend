@@ -65,6 +65,7 @@ const Header = () => {
       <div className="hidden md:flex space-x-6 font-semibold">
         <Link to="/chatmate" className="button-pixel">ChatMate</Link>
         <Link to="/pickmate" className="button-pixel">PickMate</Link>
+        <Link to="/community" className="button-pixel">Community</Link>
       </div>
 
       <div className="hidden md:flex space-x-4">
@@ -86,6 +87,7 @@ const Header = () => {
         <div className="absolute top-14 left-0 w-full bg-[#1b1b3a] text-white flex flex-col items-center py-4 space-y-4 md:hidden">
           <Link to="/chatmate" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>ChatMate</Link>
           <Link to="/pickmate" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>PickMate</Link>
+          <Link to="/community" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>Community</Link>
           {isAuth ? (
             <>
               <Link to="/mypage" className="button-pixel w-3/4 text-center" onClick={() => setMenuOpen(false)}>Mypage</Link>
